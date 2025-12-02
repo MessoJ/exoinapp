@@ -1,0 +1,366 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = templatesRoutes;
+const index_1 = require("../index");
+// Template categories
+const EmailTemplateCategory = {
+    GENERAL: 'GENERAL',
+    SALES: 'SALES',
+    SUPPORT: 'SUPPORT',
+    MARKETING: 'MARKETING',
+    HR: 'HR',
+    FINANCE: 'FINANCE',
+    FOLLOW_UP: 'FOLLOW_UP',
+    MEETING: 'MEETING',
+    INTRODUCTION: 'INTRODUCTION',
+    THANK_YOU: 'THANK_YOU',
+};
+// Common placeholders that can be used in templates
+const COMMON_PLACEHOLDERS = [
+    { key: '{{name}}', description: 'Recipient name' },
+    { key: '{{firstName}}', description: 'Recipient first name' },
+    { key: '{{lastName}}', description: 'Recipient last name' },
+    { key: '{{company}}', description: 'Company name' },
+    { key: '{{email}}', description: 'Email address' },
+    { key: '{{date}}', description: 'Current date' },
+    { key: '{{time}}', description: 'Current time' },
+    { key: '{{senderName}}', description: 'Your name' },
+    { key: '{{senderTitle}}', description: 'Your job title' },
+];
+// Extract placeholders from text
+function extractPlaceholders(text) {
+    const regex = /\{\{[^}]+\}\}/g;
+    const matches = text.match(regex) || [];
+    return [...new Set(matches)];
+}
+// Replace placeholders in text
+function replacePlaceholders(text, variables) {
+    let result = text;
+    for (const [key, value] of Object.entries(variables)) {
+        const placeholder = key.startsWith('{{') ? key : `{{${key}}}`;
+        result = result.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
+    }
+    return result;
+}
+async function templatesRoutes(fastify) {
+    // ==========================================
+    // EMAIL TEMPLATES
+    // ==========================================
+    // Get all templates for user
+    fastify.get('/templates', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id: userId, companyId } = request.user;
+        const { category, search } = request.query;
+        const where = {
+            OR: [
+                { userId },
+                { isShared: true, companyId },
+            ],
+        };
+        if (category && category !== 'ALL') {
+            where.category = category;
+        }
+        if (search) {
+            where.AND = [
+                {
+                    OR: [
+                        { name: { contains: search, mode: 'insensitive' } },
+                        { subject: { contains: search, mode: 'insensitive' } },
+                    ],
+                },
+            ];
+        }
+        const templates = await index_1.prisma.emailTemplate.findMany({
+            where,
+            orderBy: [
+                { usageCount: 'desc' },
+                { updatedAt: 'desc' },
+            ],
+        });
+        return {
+            templates: templates.map((t) => ({
+                ...t,
+                isOwner: t.userId === userId,
+            })),
+        };
+    });
+    // Get template categories
+    fastify.get('/templates/categories', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const categories = Object.values(EmailTemplateCategory).map((cat) => ({
+            id: cat,
+            name: cat.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()),
+        }));
+        return { categories };
+    });
+    // Get available placeholders
+    fastify.get('/templates/placeholders', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        return { placeholders: COMMON_PLACEHOLDERS };
+    });
+    // Get single template
+    fastify.get('/templates/:id', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params;
+        const { id: userId, companyId } = request.user;
+        const template = await index_1.prisma.emailTemplate.findFirst({
+            where: {
+                id,
+                OR: [
+                    { userId },
+                    { isShared: true, companyId },
+                ],
+            },
+        });
+        if (!template) {
+            return reply.status(404).send({ error: 'Template not found' });
+        }
+        return {
+            template: {
+                ...template,
+                isOwner: template.userId === userId,
+            },
+        };
+    });
+    // Create template
+    fastify.post('/templates', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id: userId, companyId } = request.user;
+        const { name, subject, htmlBody, textBody, category, isShared } = request.body;
+        if (!name) {
+            return reply.status(400).send({ error: 'Template name is required' });
+        }
+        // Extract placeholders from content
+        const allContent = `${subject || ''} ${htmlBody || ''} ${textBody || ''}`;
+        const placeholders = extractPlaceholders(allContent);
+        const template = await index_1.prisma.emailTemplate.create({
+            data: {
+                name,
+                subject: subject || '',
+                htmlBody,
+                textBody,
+                category: category || 'GENERAL',
+                placeholders,
+                isShared: isShared || false,
+                userId,
+                companyId: isShared ? companyId : null,
+            },
+        });
+        return { template };
+    });
+    // Update template
+    fastify.put('/templates/:id', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params;
+        const { id: userId } = request.user;
+        const { name, subject, htmlBody, textBody, category, isShared } = request.body;
+        // Check ownership
+        const existing = await index_1.prisma.emailTemplate.findFirst({
+            where: { id, userId },
+        });
+        if (!existing) {
+            return reply.status(404).send({ error: 'Template not found or no permission to edit' });
+        }
+        // Extract placeholders from content
+        const allContent = `${subject || ''} ${htmlBody || ''} ${textBody || ''}`;
+        const placeholders = extractPlaceholders(allContent);
+        const template = await index_1.prisma.emailTemplate.update({
+            where: { id },
+            data: {
+                ...(name !== undefined && { name }),
+                ...(subject !== undefined && { subject }),
+                ...(htmlBody !== undefined && { htmlBody }),
+                ...(textBody !== undefined && { textBody }),
+                ...(category !== undefined && { category: category }),
+                ...(isShared !== undefined && { isShared }),
+                placeholders,
+            },
+        });
+        return { template };
+    });
+    // Delete template
+    fastify.delete('/templates/:id', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params;
+        const { id: userId } = request.user;
+        // Check ownership
+        const existing = await index_1.prisma.emailTemplate.findFirst({
+            where: { id, userId },
+        });
+        if (!existing) {
+            return reply.status(404).send({ error: 'Template not found or no permission to delete' });
+        }
+        await index_1.prisma.emailTemplate.delete({ where: { id } });
+        return { success: true };
+    });
+    // Use template (increment counter and replace placeholders)
+    fastify.post('/templates/:id/use', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params;
+        const { id: userId, companyId } = request.user;
+        const { variables = {} } = request.body;
+        const template = await index_1.prisma.emailTemplate.findFirst({
+            where: {
+                id,
+                OR: [
+                    { userId },
+                    { isShared: true, companyId },
+                ],
+            },
+        });
+        if (!template) {
+            return reply.status(404).send({ error: 'Template not found' });
+        }
+        // Increment usage counter
+        await index_1.prisma.emailTemplate.update({
+            where: { id },
+            data: {
+                usageCount: { increment: 1 },
+                lastUsedAt: new Date(),
+            },
+        });
+        // Get sender info for placeholders
+        const sender = await index_1.prisma.user.findUnique({
+            where: { id: userId },
+            select: { firstName: true, lastName: true, jobTitle: true, email: true },
+        });
+        // Add default variables
+        const now = new Date();
+        const defaultVars = {
+            date: now.toLocaleDateString(),
+            time: now.toLocaleTimeString(),
+            senderName: sender ? `${sender.firstName} ${sender.lastName}` : '',
+            senderTitle: sender?.jobTitle || '',
+            ...variables,
+        };
+        // Replace placeholders
+        const processedSubject = replacePlaceholders(template.subject, defaultVars);
+        const processedHtmlBody = template.htmlBody ? replacePlaceholders(template.htmlBody, defaultVars) : null;
+        const processedTextBody = template.textBody ? replacePlaceholders(template.textBody, defaultVars) : null;
+        return {
+            subject: processedSubject,
+            htmlBody: processedHtmlBody,
+            textBody: processedTextBody,
+            placeholdersUsed: template.placeholders,
+            missingPlaceholders: template.placeholders.filter((p) => !defaultVars[p.replace(/[{}]/g, '')]),
+        };
+    });
+    // Duplicate template
+    fastify.post('/templates/:id/duplicate', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id } = request.params;
+        const { id: userId, companyId } = request.user;
+        const original = await index_1.prisma.emailTemplate.findFirst({
+            where: {
+                id,
+                OR: [
+                    { userId },
+                    { isShared: true, companyId },
+                ],
+            },
+        });
+        if (!original) {
+            return reply.status(404).send({ error: 'Template not found' });
+        }
+        const duplicate = await index_1.prisma.emailTemplate.create({
+            data: {
+                name: `${original.name} (Copy)`,
+                subject: original.subject,
+                htmlBody: original.htmlBody,
+                textBody: original.textBody,
+                category: original.category,
+                placeholders: original.placeholders,
+                isShared: false,
+                userId,
+            },
+        });
+        return { template: duplicate };
+    });
+    // ==========================================
+    // VACATION RESPONDER
+    // ==========================================
+    // Get vacation responder settings
+    fastify.get('/vacation', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id: userId } = request.user;
+        const responder = await index_1.prisma.vacationResponder.findUnique({
+            where: { userId },
+        });
+        return {
+            responder: responder || null,
+            isActive: responder?.isActive &&
+                new Date() >= responder.startDate &&
+                new Date() <= responder.endDate,
+        };
+    });
+    // Create/Update vacation responder
+    fastify.put('/vacation', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id: userId } = request.user;
+        const { startDate, endDate, subject, message, isActive, onlyContacts, onlyOnce, excludedDomains, } = request.body;
+        if (!startDate || !endDate || !message) {
+            return reply.status(400).send({ error: 'Start date, end date, and message are required' });
+        }
+        const responder = await index_1.prisma.vacationResponder.upsert({
+            where: { userId },
+            create: {
+                userId,
+                startDate: new Date(startDate),
+                endDate: new Date(endDate),
+                subject: subject || 'Out of Office',
+                message,
+                isActive: isActive ?? true,
+                onlyContacts: onlyContacts ?? false,
+                onlyOnce: onlyOnce ?? true,
+                excludedDomains: excludedDomains || [],
+                respondedTo: [],
+            },
+            update: {
+                startDate: new Date(startDate),
+                endDate: new Date(endDate),
+                subject: subject || 'Out of Office',
+                message,
+                isActive: isActive ?? true,
+                onlyContacts: onlyContacts ?? false,
+                onlyOnce: onlyOnce ?? true,
+                excludedDomains: excludedDomains || [],
+                // Reset responded list if dates change
+                ...(startDate && { respondedTo: [] }),
+            },
+        });
+        return { responder };
+    });
+    // Delete vacation responder
+    fastify.delete('/vacation', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id: userId } = request.user;
+        await index_1.prisma.vacationResponder.delete({
+            where: { userId },
+        }).catch(() => null); // Ignore if doesn't exist
+        return { success: true };
+    });
+    // Toggle vacation responder active status
+    fastify.patch('/vacation/toggle', {
+        preHandler: [fastify.authenticate]
+    }, async (request, reply) => {
+        const { id: userId } = request.user;
+        const { isActive } = request.body;
+        const responder = await index_1.prisma.vacationResponder.update({
+            where: { userId },
+            data: { isActive },
+        });
+        return { responder };
+    });
+}
