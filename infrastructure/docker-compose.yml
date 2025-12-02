@@ -1,0 +1,143 @@
+services:
+  # --- FRONTEND APPLICATION ---
+  frontend:
+    build:
+      context: ../apps/frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - exoin-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # --- APPLICATION BACKEND ---
+  backend:
+    build:
+      context: ../apps/backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://exoin:securepass@db:5432/exoin_db
+      - JWT_SECRET=exoin-super-secret-jwt-key-change-in-production
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=admin
+      - MINIO_SECRET_KEY=secureminiopass
+      - MINIO_USE_SSL=false
+      # SMTP Configuration for Email Sending (Brevo)
+      - SMTP_HOST=smtp-relay.brevo.com
+      - SMTP_PORT=587
+      - SMTP_SECURE=false
+      - SMTP_USER=9ce801001@smtp-brevo.com
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_FROM_EMAIL=admin@exoinafrica.com
+      - SMTP_FROM_NAME=Exoin Africa
+      # IMAP Configuration for Email Reading
+      - IMAP_HOST=mail.exoinafrica.com
+      - IMAP_PORT=993
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - exoin-net
+    restart: unless-stopped
+
+  # --- DATABASE ---
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: exoin
+      POSTGRES_PASSWORD: securepass
+      POSTGRES_DB: exoin_db
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - exoin-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U exoin -d exoin_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # --- REDIS (Cache & Job Queue) ---
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - exoin-net
+    restart: unless-stopped
+
+  # --- MAIL SERVER ---
+  mailserver:
+    image: mailserver/docker-mailserver:latest
+    hostname: mail.exoinafrica.com
+    domainname: exoinafrica.com
+    container_name: mailserver
+    ports:
+      - "25:25"
+      - "143:143"
+      - "587:587"
+      - "993:993"
+    environment:
+      - ENABLE_SPAMASSASSIN=1
+      - ENABLE_CLAMAV=1
+      - ENABLE_FAIL2BAN=1
+      - ENABLE_POSTGREY=1
+      - ONE_DIR=1
+      - DMS_DEBUG=0
+    volumes:
+      - mail-data:/var/mail
+      - mail-state:/var/mail-state
+      - mail-logs:/var/log/mail
+      - ./mail-config/:/tmp/docker-mailserver/
+    cap_add:
+      - NET_ADMIN
+    networks:
+      - exoin-net
+
+  # --- OBJECT STORAGE ---
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9011"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: secureminiopass
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9010:9000"
+      - "9011:9011"
+    networks:
+      - exoin-net
+
+networks:
+  exoin-net:
+    driver: bridge
+
+volumes:
+  db-data:
+  mail-data:
+  mail-state:
+  mail-logs:
+  minio-data:
+  redis-data:
