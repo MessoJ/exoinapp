@@ -28,24 +28,24 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - DATABASE_URL=postgresql://exoin:securepass@db:5432/exoin_db
-      - JWT_SECRET=exoin-super-secret-jwt-key-change-in-production
+      - DATABASE_URL=postgresql://exoin:${DB_PASSWORD:-securepass}@db:5432/exoin_db
+      - JWT_SECRET=${JWT_SECRET:-change-this-secret-in-production}
       - MINIO_ENDPOINT=minio
       - MINIO_PORT=9000
-      - MINIO_ACCESS_KEY=admin
-      - MINIO_SECRET_KEY=secureminiopass
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-admin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-secureminiopass}
       - MINIO_USE_SSL=false
-      # SMTP Configuration for Email Sending (Brevo)
-      - SMTP_HOST=smtp-relay.brevo.com
-      - SMTP_PORT=587
+      # SMTP Configuration for Email Sending
+      - SMTP_HOST=${SMTP_HOST:-smtp-relay.brevo.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_SECURE=false
-      - SMTP_USER=9ce801001@smtp-brevo.com
+      - SMTP_USER=${SMTP_USER}
       - SMTP_PASS=${SMTP_PASS}
-      - SMTP_FROM_EMAIL=admin@exoinafrica.com
-      - SMTP_FROM_NAME=Exoin Africa
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-admin@exoinafrica.com}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-Exoin Africa}
       # IMAP Configuration for Email Reading
-      - IMAP_HOST=mail.exoinafrica.com
-      - IMAP_PORT=993
+      - IMAP_HOST=${IMAP_HOST:-mail.exoinafrica.com}
+      - IMAP_PORT=${IMAP_PORT:-993}
       - REDIS_URL=redis://redis:6379
     depends_on:
       db:
