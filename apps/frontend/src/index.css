@@ -1,0 +1,547 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global input styling - ensure visible text */
+@layer base {
+  /* Light mode: dark text on white background */
+  input, textarea, select {
+    @apply bg-white text-slate-900;
+  }
+  
+  input::placeholder, textarea::placeholder {
+    @apply text-slate-400;
+  }
+  
+  /* Dark mode inputs */
+  .dark input, .dark textarea, .dark select {
+    @apply bg-slate-800 text-slate-100 border-slate-600;
+  }
+  
+  .dark input::placeholder, .dark textarea::placeholder {
+    @apply text-slate-500;
+  }
+  
+  /* Smooth theme transitions */
+  html {
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+  }
+  
+  /* Dark mode body styling */
+  .dark body {
+    @apply bg-slate-900 text-slate-100;
+  }
+  
+  /* Dark mode scrollbar styling */
+  .dark ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .dark ::-webkit-scrollbar-track {
+    @apply bg-slate-800;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb {
+    @apply bg-slate-600 rounded-full;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-500;
+  }
+}
+
+/* Email content dark mode - override inline styles from HTML emails */
+@layer utilities {
+  .dark .email-html-content,
+  .dark .email-content-dark,
+  .dark .prose {
+    color-scheme: dark;
+  }
+  
+  /* Force dark mode on email content with inline styles */
+  .dark .email-html-content *,
+  .dark .email-content-dark *,
+  .dark .prose * {
+    border-color: theme('colors.slate.700') !important;
+  }
+  
+  /* Override white/light backgrounds */
+  .dark .email-html-content [style*="background-color: white"],
+  .dark .email-html-content [style*="background-color:#fff"],
+  .dark .email-html-content [style*="background-color: #fff"],
+  .dark .email-html-content [style*="background:#fff"],
+  .dark .email-html-content [style*="background: white"],
+  .dark .email-html-content [style*="background-color:white"],
+  .dark .email-html-content [style*="background: #ffffff"],
+  .dark .email-html-content [style*="background-color: #ffffff"],
+  .dark .email-html-content [style*="background:#ffffff"],
+  .dark .email-html-content [style*="background-color: rgb(255"],
+  .dark .email-content-dark [style*="background-color: white"],
+  .dark .email-content-dark [style*="background-color:#fff"],
+  .dark .email-content-dark [style*="background-color: #fff"],
+  .dark .email-content-dark [style*="background:#fff"],
+  .dark .email-content-dark [style*="background: white"],
+  .dark .email-content-dark [style*="background-color:white"],
+  .dark .email-content-dark [style*="background: #ffffff"],
+  .dark .email-content-dark [style*="background-color: #ffffff"],
+  .dark .email-content-dark [style*="background:#ffffff"],
+  .dark .email-content-dark [style*="background-color: rgb(255"],
+  .dark .prose [style*="background-color: white"],
+  .dark .prose [style*="background-color:#fff"],
+  .dark .prose [style*="background-color: #fff"],
+  .dark .prose [style*="background:#fff"],
+  .dark .prose [style*="background: white"],
+  .dark .prose [style*="background-color:white"] {
+    background-color: transparent !important;
+  }
+  
+  /* Override dark/black text colors to light */
+  .dark .email-html-content [style*="color: #000"],
+  .dark .email-html-content [style*="color:#000"],
+  .dark .email-html-content [style*="color: black"],
+  .dark .email-html-content [style*="color:black"],
+  .dark .email-html-content [style*="color: #333"],
+  .dark .email-html-content [style*="color:#333"],
+  .dark .email-html-content [style*="color: rgb(0, 0, 0)"],
+  .dark .email-html-content [style*="color: rgb(51, 51, 51)"],
+  .dark .email-content-dark [style*="color: #000"],
+  .dark .email-content-dark [style*="color:#000"],
+  .dark .email-content-dark [style*="color: black"],
+  .dark .email-content-dark [style*="color:black"],
+  .dark .email-content-dark [style*="color: #333"],
+  .dark .email-content-dark [style*="color:#333"],
+  .dark .email-content-dark [style*="color: rgb(0, 0, 0)"],
+  .dark .email-content-dark [style*="color: rgb(51, 51, 51)"],
+  .dark .prose [style*="color: #000"],
+  .dark .prose [style*="color:#000"],
+  .dark .prose [style*="color: black"],
+  .dark .prose [style*="color:black"] {
+    color: theme('colors.slate.200') !important;
+  }
+  
+  /* Make sure tables and divs with white backgrounds are transparent */
+  .dark .email-content-dark table,
+  .dark .email-content-dark div,
+  .dark .email-content-dark td,
+  .dark .email-content-dark th {
+    background-color: transparent !important;
+  }
+  
+  /* Ensure text is visible in dark mode */
+  .dark .email-content-dark,
+  .dark .email-content-dark p,
+  .dark .email-content-dark span,
+  .dark .email-content-dark div,
+  .dark .email-content-dark td,
+  .dark .email-content-dark li {
+    color: theme('colors.slate.300') !important;
+  }
+  
+  .dark .email-content-dark h1,
+  .dark .email-content-dark h2,
+  .dark .email-content-dark h3,
+  .dark .email-content-dark h4,
+  .dark .email-content-dark h5,
+  .dark .email-content-dark h6,
+  .dark .email-content-dark strong,
+  .dark .email-content-dark b {
+    color: theme('colors.slate.100') !important;
+  }
+  
+  .dark .email-content-dark a {
+    color: theme('colors.orange.400') !important;
+  }
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Shake animation for errors */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Compose Modal - Quill Editor Styling */
+.compose-editor {
+  display: flex;
+  flex-direction: column;
+}
+
+.compose-editor .quill {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.compose-editor .ql-container {
+  flex: 1;
+  overflow-y: auto;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.compose-editor .ql-editor {
+  min-height: 150px;
+  padding: 12px 16px;
+}
+
+.compose-editor .ql-editor.ql-blank::before {
+  font-style: normal;
+  color: #9ca3af;
+}
+
+/* Quill toolbar styling */
+.compose-editor .ql-toolbar {
+  border: none !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  padding: 8px !important;
+  background: #f9fafb;
+}
+
+.compose-editor .ql-container {
+  border: none !important;
+}
+
+/* Dark mode Quill styles */
+.dark .compose-editor .ql-toolbar {
+  background: #1f2937 !important;
+  border-bottom-color: #374151 !important;
+}
+
+.dark .compose-editor .ql-toolbar .ql-stroke {
+  stroke: #9ca3af !important;
+}
+
+.dark .compose-editor .ql-toolbar .ql-fill {
+  fill: #9ca3af !important;
+}
+
+.dark .compose-editor .ql-toolbar .ql-picker {
+  color: #9ca3af !important;
+}
+
+.dark .compose-editor .ql-toolbar .ql-picker-options {
+  background: #374151 !important;
+  border-color: #4b5563 !important;
+}
+
+.dark .compose-editor .ql-toolbar .ql-picker-item {
+  color: #d1d5db !important;
+}
+
+.dark .compose-editor .ql-toolbar .ql-picker-item:hover {
+  color: #f3f4f6 !important;
+  background: #4b5563 !important;
+}
+
+.dark .compose-editor .ql-toolbar button:hover .ql-stroke,
+.dark .compose-editor .ql-toolbar button.ql-active .ql-stroke {
+  stroke: #60a5fa !important;
+}
+
+.dark .compose-editor .ql-toolbar button:hover .ql-fill,
+.dark .compose-editor .ql-toolbar button.ql-active .ql-fill {
+  fill: #60a5fa !important;
+}
+
+.dark .compose-editor .ql-container {
+  background: #1f2937 !important;
+}
+
+.dark .compose-editor .ql-editor {
+  color: #f3f4f6 !important;
+}
+
+.dark .compose-editor .ql-editor.ql-blank::before {
+  color: #6b7280 !important;
+}
+
+/* Quill content styles */
+.compose-editor .ql-editor blockquote {
+  border-left: 4px solid #3b82f6;
+  padding-left: 16px;
+  margin: 8px 0;
+  color: #6b7280;
+}
+
+.dark .compose-editor .ql-editor blockquote {
+  border-left-color: #60a5fa;
+  color: #9ca3af;
+}
+
+.compose-editor .ql-editor pre.ql-syntax {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 12px;
+  border-radius: 6px;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 13px;
+  overflow-x: auto;
+}
+
+.compose-editor .ql-editor ul,
+.compose-editor .ql-editor ol {
+  padding-left: 24px;
+  margin: 8px 0;
+}
+
+.compose-editor .ql-editor li {
+  margin: 4px 0;
+}
+
+/* Link styling in editor */
+.compose-editor .ql-editor a {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+
+.dark .compose-editor .ql-editor a {
+  color: #60a5fa;
+}
+
+/* Dark mode for emoji picker */
+.dark .EmojiPickerReact {
+  --epr-bg-color: #1f2937 !important;
+  --epr-category-label-bg-color: #1f2937 !important;
+  --epr-text-color: #f3f4f6 !important;
+  --epr-hover-bg-color: #374151 !important;
+  --epr-search-input-bg-color: #374151 !important;
+  --epr-picker-border-color: #374151 !important;
+  --epr-search-input-text-color: #f3f4f6 !important;
+  --epr-search-input-placeholder-color: #9ca3af !important;
+}
+
+/* Compose modal dark mode adjustments */
+.dark .compose-editor .ql-toolbar {
+  background: #111827 !important;
+  border-bottom-color: #1f2937 !important;
+}
+
+.dark .compose-editor .ql-container {
+  background: #111827 !important;
+}
+
+/* Better scrollbar for compose editor */
+.compose-editor .ql-editor::-webkit-scrollbar {
+  width: 6px;
+}
+
+.compose-editor .ql-editor::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.compose-editor .ql-editor::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.dark .compose-editor .ql-editor::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+/* ==========================================
+   MOBILE RESPONSIVE UTILITIES
+   ========================================== */
+
+/* Hide scrollbar on mobile for cleaner look */
+@media (max-width: 768px) {
+  .hide-scrollbar-mobile::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar-mobile {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Touch-friendly tap targets */
+@layer utilities {
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  .touch-target-sm {
+    @apply min-h-[36px] min-w-[36px];
+  }
+}
+
+/* Mobile-specific overrides */
+@media (max-width: 640px) {
+  /* Larger touch targets on mobile */
+  button, a, input[type="checkbox"], input[type="radio"] {
+    min-height: 44px;
+  }
+  
+  /* Better text sizing on mobile */
+  input, textarea, select {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+  }
+  
+  /* Reduce padding on mobile */
+  .mobile-compact {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* Safe area support for notched devices */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* Mobile overlay backdrop */
+.mobile-overlay {
+  @apply fixed inset-0 bg-black/50 z-40 transition-opacity;
+}
+
+/* Mobile slide-in panel */
+.mobile-panel {
+  @apply fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-slate-900 shadow-xl transform transition-transform duration-300 ease-in-out;
+}
+
+.mobile-panel.closed {
+  @apply -translate-x-full;
+}
+
+.mobile-panel.open {
+  @apply translate-x-0;
+}
+
+/* Swipe indicator */
+.swipe-indicator {
+  @apply w-12 h-1 bg-slate-300 dark:bg-slate-600 rounded-full mx-auto mt-2;
+}
+
+/* Mobile bottom navigation */
+.mobile-bottom-nav {
+  @apply fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 px-2 py-1 z-40 safe-bottom;
+}
+
+/* Responsive table to cards */
+@media (max-width: 768px) {
+  .table-to-cards table,
+  .table-to-cards thead,
+  .table-to-cards tbody,
+  .table-to-cards th,
+  .table-to-cards td,
+  .table-to-cards tr {
+    display: block;
+  }
+  
+  .table-to-cards thead {
+    display: none;
+  }
+  
+  .table-to-cards tr {
+    @apply mb-4 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-4;
+  }
+  
+  .table-to-cards td {
+    @apply border-0 p-0 mb-2;
+  }
+  
+  .table-to-cards td:last-child {
+    @apply mb-0;
+  }
+}
+
+/* Pull to refresh indicator */
+.pull-refresh {
+  @apply absolute top-0 left-0 right-0 flex items-center justify-center py-4 transition-transform;
+  transform: translateY(-100%);
+}
+
+.pull-refresh.pulling {
+  transform: translateY(0);
+}
+
+/* Floating action button */
+.fab {
+  @apply fixed bottom-20 right-4 w-14 h-14 bg-orange-600 hover:bg-orange-700 text-white rounded-full shadow-lg flex items-center justify-center z-30 transition-transform active:scale-95;
+}
+
+@media (min-width: 768px) {
+  .fab {
+    @apply hidden;
+  }
+}
+
+/* Mobile card swipe actions */
+.swipe-actions {
+  @apply absolute inset-y-0 right-0 flex items-center gap-1 pr-2 opacity-0 transition-opacity;
+}
+
+.swipe-card:hover .swipe-actions,
+.swipe-card:focus-within .swipe-actions {
+  @apply opacity-100;
+}
+
+/* Responsive modal */
+@media (max-width: 640px) {
+  .responsive-modal {
+    @apply fixed inset-0 m-0 rounded-none max-w-none max-h-none;
+  }
+  
+  .responsive-modal-content {
+    @apply h-full overflow-y-auto;
+  }
+}
+
+/* Stack horizontal items on mobile */
+@media (max-width: 640px) {
+  .stack-on-mobile {
+    @apply flex-col items-stretch;
+  }
+  
+  .stack-on-mobile > * {
+    @apply w-full;
+  }
+}
+
+/* Mobile menu animation */
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutLeft {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s ease-out forwards;
+}
+
+.animate-slide-out-left {
+  animation: slideOutLeft 0.3s ease-in forwards;
+}
+
