@@ -1,0 +1,223 @@
+# Docker Compose configuration for Email Hosting Stack
+# This sets up a complete self-hosted email infrastructure
+# 
+# Prerequisites:
+# 1. Domain DNS records must be configured (see EMAIL_HOSTING_GUIDE.md)
+# 2. Ports 25, 465, 587, 993, 995 must be open on your firewall
+# 3. Reverse DNS (PTR) must be set for your server IP
+
+version: '3.8'
+
+services:
+  # ============================================
+  # MAILU - Full-featured Mail Server
+  # ============================================
+  # Mailu provides a complete mail server with:
+  # - Postfix for SMTP (sending/receiving)
+  # - Dovecot for IMAP/POP3 (mailbox access)
+  # - Rspamd for anti-spam
+  # - ClamAV for antivirus
+  # - Rainloop/Roundcube webmail
+  # - Admin interface
+  
+  mailu-front:
+    image: mailu/nginx:2.0
+    container_name: mailu-front
+    restart: unless-stopped
+    env_file: .env.mail
+    ports:
+      - "80:80"     # HTTP (for Let's Encrypt)
+      - "443:443"   # HTTPS
+      - "25:25"     # SMTP
+      - "465:465"   # SMTPS (submission over TLS)
+      - "587:587"   # Submission
+      - "2525:587"  # Alternative Submission (for blocked ports)
+      - "110:110"   # POP3
+      - "995:995"   # POP3S
+      - "143:143"   # IMAP
+      - "993:993"   # IMAPS
+    volumes:
+      - mailu-certs:/certs
+      - mailu-overrides:/overrides:ro
+    networks:
+      - mailu-network
+    depends_on:
+      - mailu-admin
+
+  mailu-admin:
+    image: mailu/admin:2.0
+    container_name: mailu-admin
+    restart: unless-stopped
+    env_file: .env.mail
+    volumes:
+      - mailu-data:/data
+      - mailu-dkim:/dkim
+    networks:
+      - mailu-network
+    depends_on:
+      - mailu-redis
+      - mailu-db
+
+  mailu-imap:
+    image: mailu/dovecot:2.0
+    container_name: mailu-imap
+    restart: unless-stopped
+    env_file: .env.mail
+    volumes:
+      - mailu-mail:/mail
+      - mailu-overrides:/overrides:ro
+    networks:
+      - mailu-network
+    depends_on:
+      - mailu-front
+
+  mailu-smtp:
+    image: mailu/postfix:2.0
+    container_name: mailu-smtp
+    restart: unless-stopped
+    env_file: .env.mail
+    volumes:
+      - mailu-mailqueue:/queue
+      - mailu-overrides:/overrides:ro
+    networks:
+      - mailu-network
+    depends_on:
+      - mailu-front
+
+  mailu-antispam:
+    image: mailu/rspamd:2.0
+    container_name: mailu-antispam
+    restart: unless-stopped
+    env_file: .env.mail
+    volumes:
+      - mailu-filter:/var/lib/rspamd
+      - mailu-overrides:/overrides:ro
+    networks:
+      - mailu-network
+    depends_on:
+      - mailu-front
+
+  # Optional: Antivirus (uses significant memory ~1GB)
+  # Uncomment if you need virus scanning
+  # mailu-antivirus:
+  #   image: mailu/clamav:2.0
+  #   container_name: mailu-antivirus
+  #   restart: unless-stopped
+  #   env_file: .env.mail
+  #   volumes:
+  #     - mailu-filter:/data
+  #   networks:
+  #     - mailu-network
+
+  mailu-webmail:
+    image: mailu/webmail:2.0
+    container_name: mailu-webmail
+    restart: unless-stopped
+    env_file: .env.mail
+    volumes:
+      - mailu-webmail:/data
+      - mailu-overrides:/overrides:ro
+    networks:
+      - mailu-network
+    depends_on:
+      - mailu-imap
+
+  mailu-redis:
+    image: redis:7-alpine
+    container_name: mailu-redis
+    restart: unless-stopped
+    volumes:
+      - mailu-redis:/data
+    networks:
+      - mailu-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mailu-db:
+    image: postgres:15-alpine
+    container_name: mailu-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-mailu}
+      POSTGRES_USER: ${DB_USER:-mailu}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mailu-db:/var/lib/postgresql/data
+    networks:
+      - mailu-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-mailu}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # MONITORING & LOGGING (Optional)
+  # ============================================
+  
+  # Prometheus for metrics
+  # prometheus:
+  #   image: prom/prometheus:v2.45.0
+  #   container_name: mail-prometheus
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+  #     - prometheus-data:/prometheus
+  #   command:
+  #     - '--config.file=/etc/prometheus/prometheus.yml'
+  #     - '--storage.tsdb.path=/prometheus'
+  #   networks:
+  #     - mailu-network
+  #   ports:
+  #     - "9090:9090"
+
+  # Grafana for dashboards
+  # grafana:
+  #   image: grafana/grafana:10.0.0
+  #   container_name: mail-grafana
+  #   restart: unless-stopped
+  #   environment:
+  #     GF_SECURITY_ADMIN_USER: admin
+  #     GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+  #   volumes:
+  #     - grafana-data:/var/lib/grafana
+  #   networks:
+  #     - mailu-network
+  #   ports:
+  #     - "3001:3000"
+
+networks:
+  mailu-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+
+volumes:
+  mailu-data:
+    driver: local
+  mailu-dkim:
+    driver: local
+  mailu-mail:
+    driver: local
+  mailu-mailqueue:
+    driver: local
+  mailu-filter:
+    driver: local
+  mailu-certs:
+    driver: local
+  mailu-overrides:
+    driver: local
+  mailu-webmail:
+    driver: local
+  mailu-redis:
+    driver: local
+  mailu-db:
+    driver: local
+  # prometheus-data:
+  #   driver: local
+  # grafana-data:
+  #   driver: local
