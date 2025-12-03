@@ -15,21 +15,32 @@
  */
 
 const nodemailer = require('nodemailer');
+require('dotenv').config();
 
 // Test with different SMTP configurations
 async function testAlternativeSMTP() {
   console.log('=== Alternative SMTP Tests ===\n');
   
+  // Get credentials from environment variables
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  
+  if (!smtpUser || !smtpPass) {
+    console.log('Error: SMTP credentials not configured.');
+    console.log('Please set SMTP_USER and SMTP_PASS environment variables.');
+    process.exit(1);
+  }
+  
   // Option 1: Direct via port 587 (submission port - often not blocked)
   console.log('--- Test 1: Port 587 (STARTTLS) ---');
   try {
     const transporter587 = nodemailer.createTransport({
-      host: 'mail.exoinafrica.com',
+      host: process.env.SMTP_HOST || 'mail.exoinafrica.com',
       port: 587,
       secure: false, // STARTTLS
       auth: {
-        user: 'admin@exoinafrica.com',
-        pass: 'Admin@2030'
+        user: smtpUser,
+        pass: smtpPass
       },
       tls: {
         rejectUnauthorized: false
