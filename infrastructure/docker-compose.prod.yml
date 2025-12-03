@@ -1,22 +1,21 @@
-# Production docker-compose with SSL/HTTPS support
+# Production docker-compose for exoinapp
+# Works alongside Mailu - Mailu handles SSL, this app runs on internal ports
 # Run with: docker-compose -f docker-compose.prod.yml up -d
 
 services:
-  # --- NGINX REVERSE PROXY (handles SSL termination) ---
-  nginx-proxy:
+  # --- NGINX INTERNAL PROXY (proxied by Mailu) ---
+  nginx-app:
     image: nginx:alpine
     ports:
-      - "80:80"
-      - "443:443"
+      - "127.0.0.1:8080:80"  # Only accessible from localhost, Mailu proxies to this
     volumes:
-      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-      - ./nginx/certbot/www:/var/www/certbot:ro
+      - ./nginx/nginx.app.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - frontend
       - backend
     networks:
       - exoin-net
+      - mailu_default  # Connect to Mailu network
     restart: unless-stopped
 
   # --- FRONTEND APPLICATION ---
@@ -118,6 +117,8 @@ services:
 networks:
   exoin-net:
     driver: bridge
+  mailu_default:
+    external: true  # Connect to existing Mailu network
 
 volumes:
   db-data:
