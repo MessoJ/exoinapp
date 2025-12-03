@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import CollapsibleSidebar from './CollapsibleSidebar';
+import { ThemeToggleCompact } from '../ui/ThemeToggle';
 
 const DashboardLayout = () => {
   const navigate = useNavigate();
@@ -60,11 +61,14 @@ const DashboardLayout = () => {
             </div>
           </div>
           
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1 sm:gap-2">
             {/* Mobile Search Button */}
             <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg sm:hidden">
               <Search size={20} className="text-slate-500 dark:text-slate-400" />
             </button>
+            
+            {/* Theme Toggle */}
+            <ThemeToggleCompact />
             
             <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg relative">
               <Bell size={20} className="text-slate-500 dark:text-slate-400" />

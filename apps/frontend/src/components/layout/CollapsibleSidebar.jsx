@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { mailApi } from '../../lib/api';
 import Logo from '../templates/Logo';
+import { ThemeDropdown } from '../ui/ThemeToggle';
 
 // Sidebar Navigation Item with optional children
 const NavItem = ({ to, icon: Icon, label, badge, children, isActive, collapsed, onNavigate }) => {
@@ -317,6 +318,12 @@ const CollapsibleSidebar = ({ onCloseMobile }) => {
             </div>
           </div>
         )}
+        
+        {/* Theme Toggle */}
+        <div className="mb-2">
+          <ThemeDropdown collapsed={collapsed} />
+        </div>
+        
         <button 
           onClick={handleLogout}
           className={`flex items-center gap-3 px-3 py-2.5 w-full text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors ${collapsed ? 'justify-center' : ''}`}

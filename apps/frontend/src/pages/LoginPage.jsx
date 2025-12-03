@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, AlertCircle, Chrome, Briefcase, Shield, Loader2 } from 'lucide-react';
 import api from '../lib/api';
+import { ThemeToggleButton } from '../components/ui/ThemeToggle';
 
 const SSOButton = ({ provider, onClick, loading }) => {
   const icons = {
@@ -16,10 +17,10 @@ const SSOButton = ({ provider, onClick, loading }) => {
     <button
       onClick={() => onClick(provider.id)}
       disabled={loading}
-      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-slate-200 rounded-lg hover:bg-slate-50 active:bg-slate-100 transition-colors disabled:opacity-50 min-w-0"
+      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 active:bg-slate-100 dark:active:bg-slate-600 transition-colors disabled:opacity-50 min-w-0"
     >
       {loading ? <Loader2 className="w-5 h-5 animate-spin text-slate-500 flex-shrink-0" /> : icons[provider.id] || icons.oidc}
-      <span className="text-sm font-medium text-slate-700 truncate">{provider.name}</span>
+      <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{provider.name}</span>
     </button>
   );
 };
@@ -82,7 +83,12 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 safe-top safe-bottom">
+    <div className="min-h-screen bg-slate-900 dark:bg-slate-950 flex items-center justify-center p-4 safe-top safe-bottom relative">
+      {/* Theme Toggle - Top Right */}
+      <div className="absolute top-4 right-4">
+        <ThemeToggleButton className="text-slate-400 hover:text-white hover:bg-slate-800" />
+      </div>
+      
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-6 sm:mb-8">
@@ -108,12 +114,12 @@ const LoginPage = () => {
         </div>
 
         {/* Login Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8">
-          <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">Welcome Back</h2>
-          <p className="text-slate-500 text-sm mb-6">Sign in to your workspace</p>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 sm:p-8">
+          <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2">Welcome Back</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Sign in to your workspace</p>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-center gap-2">
+            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg mb-6 flex items-center gap-2">
               <AlertCircle size={18} className="flex-shrink-0" />
               <span className="text-sm">{error}</span>
             </div>
@@ -121,7 +127,7 @@ const LoginPage = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input
@@ -129,7 +135,7 @@ const LoginPage = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="your@email.com"
-                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-base"
+                  className="w-full pl-10 pr-4 py-3 border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-base"
                   required
                   autoComplete="email"
                 />
@@ -137,7 +143,7 @@ const LoginPage = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input
@@ -145,7 +151,7 @@ const LoginPage = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-base"
+                  className="w-full pl-10 pr-4 py-3 border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-base"
                   required
                   autoComplete="current-password"
                 />
@@ -166,10 +172,10 @@ const LoginPage = () => {
             <div className="mt-6">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200"></div>
+                  <div className="w-full border-t border-slate-200 dark:border-slate-600"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-3 bg-white text-slate-500">Or continue with</span>
+                  <span className="px-3 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400">Or continue with</span>
                 </div>
               </div>
               
@@ -187,7 +193,7 @@ const LoginPage = () => {
           )}
 
           <div className="mt-6 text-center">
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-400 dark:text-slate-500">
               Forgot your password? Contact your administrator
             </p>
           </div>
