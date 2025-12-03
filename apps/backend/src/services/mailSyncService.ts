@@ -43,7 +43,7 @@ interface MailServerConfig {
 // Get mail server config from env
 function getMailServerConfig(): MailServerConfig {
   return {
-    imapHost: process.env.SMTP_HOST || 'mail.exoinafrica.com',
+    imapHost: process.env.IMAP_HOST || 'mail.exoinafrica.com',
     imapPort: parseInt(process.env.IMAP_PORT || '993'),
     smtpHost: process.env.SMTP_HOST || 'mail.exoinafrica.com',
     smtpPort: parseInt(process.env.SMTP_PORT || '465'),
