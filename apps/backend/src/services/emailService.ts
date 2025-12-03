@@ -71,30 +71,37 @@ class EmailService {
     const user = process.env.SMTP_USER;
     const pass = process.env.SMTP_PASS;
 
-    if (!host || !user || !pass) {
+    if (!host) {
       console.warn('⚠️  SMTP not configured. Email sending will be simulated.');
       this.isConfigured = false;
       return;
     }
 
     try {
-      this.transporter = nodemailer.createTransport({
+      // Build transport config - auth is optional for internal SMTP
+      const transportConfig: any = {
         host,
         port,
         secure,
-        auth: { user, pass },
         // Timeout settings
         connectionTimeout: 10000, // 10 seconds
         greetingTimeout: 10000,
         socketTimeout: 30000, // 30 seconds for large emails
         // TLS options
         tls: {
-          rejectUnauthorized: process.env.NODE_ENV === 'production',
+          rejectUnauthorized: false, // Accept self-signed certs for internal mail
         },
         // Debug mode for development
         debug: process.env.NODE_ENV === 'development',
         logger: process.env.NODE_ENV === 'development',
-      });
+      };
+
+      // Only add auth if credentials are provided
+      if (user && pass) {
+        transportConfig.auth = { user, pass };
+      }
+
+      this.transporter = nodemailer.createTransport(transportConfig);
 
       this.isConfigured = true;
       console.log('✅ SMTP transporter initialized');
