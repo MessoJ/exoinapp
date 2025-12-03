@@ -1,13 +1,14 @@
 # Production docker-compose for exoinapp
-# Works alongside Mailu - Mailu handles SSL, this app runs on internal ports
+# Works alongside Mailu - app runs on port 8080
+# Access via: http://app.exoinafrica.com:8080 (or use Caddy for SSL termination)
 # Run with: docker-compose -f docker-compose.prod.yml up -d
 
 services:
-  # --- NGINX INTERNAL PROXY (proxied by Mailu) ---
+  # --- NGINX APPLICATION PROXY ---
   nginx-app:
     image: nginx:alpine
     ports:
-      - "127.0.0.1:8080:80"  # Only accessible from localhost, Mailu proxies to this
+      - "8080:80"  # Accessible on port 8080
     volumes:
       - ./nginx/nginx.app.conf:/etc/nginx/nginx.conf:ro
     depends_on:
@@ -15,7 +16,6 @@ services:
       - backend
     networks:
       - exoin-net
-      - mailu_default  # Connect to Mailu network
     restart: unless-stopped
 
   # --- FRONTEND APPLICATION ---
@@ -117,8 +117,6 @@ services:
 networks:
   exoin-net:
     driver: bridge
-  mailu_default:
-    external: true  # Connect to existing Mailu network
 
 volumes:
   db-data:
