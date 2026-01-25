@@ -85,7 +85,10 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
       dueDate, 
       notes, 
       terms, 
-      items 
+      items,
+      scope,
+      taxable,
+      taxRate: reqTaxRate
     } = request.body as any;
     
     // Generate document number
@@ -98,7 +101,8 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
     
     // Calculate totals
     const subtotal = items.reduce((sum: number, item: any) => sum + (item.quantity * item.unitPrice), 0);
-    const taxRate = 16; // Default Kenya VAT
+    const isTaxable = taxable !== false;
+    const taxRate = isTaxable ? (Number(reqTaxRate) || 16) : 0;
     const taxAmount = subtotal * (taxRate / 100);
     const total = subtotal + taxAmount;
     
@@ -112,9 +116,11 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
         issueDate: new Date(documentDate),
         dueDate: dueDate ? new Date(dueDate) : null,
         subtotal,
+        taxable: isTaxable,
         taxRate,
         taxAmount,
         total,
+        scope,
         notes,
         terms,
         companyId,
@@ -122,6 +128,7 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
         createdById: userId,
         items: {
           create: items.map((item: any) => ({
+            name: item.name,
             description: item.description,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
@@ -151,7 +158,10 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
       dueDate, 
       notes, 
       terms, 
-      items 
+      items,
+      scope,
+      taxable,
+      taxRate
     } = request.body as any;
     
     // Verify document exists and belongs to company
@@ -164,23 +174,30 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
     }
     
     // If items are updated, recalculate totals
-    let updateData: any = { status, clientId, issueDate, dueDate, notes, terms };
+    let updateData: any = { status, clientId, issueDate, dueDate, notes, terms, scope };
+    if (taxable !== undefined) updateData.taxable = taxable;
+    if (taxRate !== undefined) updateData.taxRate = Number(taxRate);
     
     if (items) {
       // Delete existing items and create new ones
       await prisma.documentItem.deleteMany({ where: { documentId: id } });
       
+      const effectiveTaxable = taxable !== undefined ? taxable : ((existing as any).taxable ?? true);
+      const effectiveTaxRate = taxRate !== undefined ? Number(taxRate) : Number(existing.taxRate);
+      const actualTaxRate = effectiveTaxable ? effectiveTaxRate : 0;
+
       const subtotal = items.reduce((sum: number, item: any) => sum + (item.quantity * item.unitPrice), 0);
-      const taxAmount = subtotal * (Number(existing.taxRate) / 100);
+      const taxAmount = subtotal * (actualTaxRate / 100);
       const total = subtotal + taxAmount;
       
       updateData = {
         ...updateData,
-        subtotal,
         taxAmount,
         total,
+        subtotal,
         items: {
           create: items.map((item: any) => ({
+            name: item.name,
             description: item.description,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
