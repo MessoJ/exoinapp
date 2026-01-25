@@ -321,7 +321,7 @@ export const QuotationTemplate = ({
                <tbody className="divide-y divide-slate-100">
                   {displayData.items.map((item, i) => (
                      <tr key={i} className="group">
-                        <td className="py-4 pl-4 align-top">
+                        <td className="py-4 pl-4 pr-3 align-top">
                            {mode === 'edit' ? (
                              <input 
                                className="w-full font-bold text-slate-900 text-xs bg-transparent border-b border-transparent hover:border-slate-300 focus:outline-none focus:border-orange-500"
@@ -330,31 +330,20 @@ export const QuotationTemplate = ({
                                placeholder="Item Name"
                              />
                            ) : (
-                             <p className="font-bold text-slate-900 text-xs">{item.name}</p>
+                             <p className="font-bold text-slate-900 text-xs leading-relaxed">{item.name}</p>
                            )}
                         </td>
                         <td className="py-4 pr-4 align-top">
                            {mode === 'edit' ? (
-                             <>
-                               <input 
-                                 className="w-full font-bold text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:outline-none focus:border-orange-500"
-                                 value={item.title}
-                                 onChange={(e) => handleItemChange(i, 'title', e.target.value)}
-                                 placeholder="Item Title"
-                               />
-                               <textarea 
-                                 className="w-full text-[10px] text-slate-500 mt-1 bg-transparent border-b border-transparent hover:border-slate-300 focus:outline-none focus:border-orange-500 resize-none"
-                                 value={item.desc}
-                                 onChange={(e) => handleItemChange(i, 'desc', e.target.value)}
-                                 placeholder="Description"
-                                 rows={2}
-                               />
-                             </>
+                             <textarea 
+                               className="w-full text-xs text-slate-600 bg-transparent border-b border-transparent hover:border-slate-300 focus:outline-none focus:border-orange-500 resize-none leading-relaxed"
+                               value={item.desc || item.title || ''}
+                               onChange={(e) => handleItemChange(i, 'desc', e.target.value)}
+                               placeholder="Item description..."
+                               rows={2}
+                             />
                            ) : (
-                             <>
-                               <p className="font-bold text-slate-800">{item.title}</p>
-                               <p className="text-[10px] text-slate-500 mt-1">{item.desc}</p>
-                             </>
+                             <p className="text-xs text-slate-600 leading-relaxed">{item.desc || item.title}</p>
                            )}
                         </td>
                         <td className="py-4 text-right font-mono text-slate-500 align-top">
