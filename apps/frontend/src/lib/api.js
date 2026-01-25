@@ -234,16 +234,9 @@ export const emailHostingApi = {
   getDomain: (id) => api.get(`/email-hosting/domains/${id}`),
   deleteDomain: (id) => api.delete(`/email-hosting/domains/${id}`),
   getDomainDNS: (domainId) => api.get(`/email-hosting/domains/${domainId}/dns`),
-  regenerateDNS: (domainId) => api.post(`/email-hosting/domains/${domainId}/regenerate-dns`),
   verifyDomain: (domainId) => api.post(`/email-hosting/domains/${domainId}/verify`),
   getDomainStats: (domainId) => api.get(`/email-hosting/domains/${domainId}/stats`),
   getDomainLogs: (domainId, params) => api.get(`/email-hosting/domains/${domainId}/logs`, { params }),
-
-  // Gmail Deliverability
-  checkGmailDeliverability: (domainId) => api.get(`/email-hosting/domains/${domainId}/gmail-check`),
-  checkPTR: (serverIP, hostname) => api.post('/email-hosting/check-ptr', { serverIP, hostname }),
-  checkBlacklists: (serverIP) => api.post('/email-hosting/check-blacklists', { serverIP }),
-  upgradeDmarc: (domainId, policy) => api.post(`/email-hosting/domains/${domainId}/upgrade-dmarc`, { policy }),
 
   // Mailboxes
   getMailboxes: (domainId) => api.get(`/email-hosting/domains/${domainId}/mailboxes`),

@@ -130,8 +130,10 @@ const TemplateEditorPage = () => {
     date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
     expiry: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
     client: { name: '', dept: '', address: '', city: '' },
-    scope: 'Exoin Africa proposes the following autonomous hygiene solution tailored to your facility\'s specifications.',
-    items: [{ title: '', desc: '', unit: 'Month', qty: 1, rate: 0, total: 0 }],
+    scope: 'Exoin Africa proposes the following solution tailored to your specifications.',
+    taxable: true,
+    taxRate: 16,
+    items: [{ name: '', title: '', desc: '', unit: 'Month', qty: 1, rate: 0, total: 0 }],
     subtotal: 0,
     tax: 0,
     total: 0
@@ -160,11 +162,12 @@ const TemplateEditorPage = () => {
   useEffect(() => {
     if (type === 'quotation') {
       const subtotal = quoteData.items.reduce((sum, item) => sum + (item.total || 0), 0);
-      const tax = subtotal * 0.16;
+      const taxRate = quoteData.taxRate || 16;
+      const tax = quoteData.taxable !== false ? subtotal * (taxRate / 100) : 0;
       const total = subtotal + tax;
       setQuoteData(prev => ({ ...prev, subtotal, tax, total }));
     }
-  }, [quoteData.items, type]);
+  }, [quoteData.items, quoteData.taxable, quoteData.taxRate, type]);
 
   const loadDocument = async (id) => {
     setLoading(true);

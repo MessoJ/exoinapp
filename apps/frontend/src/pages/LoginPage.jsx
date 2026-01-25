@@ -3,24 +3,23 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, AlertCircle, Chrome, Briefcase, Shield, Loader2 } from 'lucide-react';
 import api from '../lib/api';
-import { ThemeToggleButton } from '../components/ui/ThemeToggle';
 
 const SSOButton = ({ provider, onClick, loading }) => {
   const icons = {
-    google: <Chrome className="w-5 h-5 text-red-500 flex-shrink-0" />,
-    microsoft: <Briefcase className="w-5 h-5 text-blue-600 flex-shrink-0" />,
-    keycloak: <Shield className="w-5 h-5 text-green-600 flex-shrink-0" />,
-    oidc: <Shield className="w-5 h-5 text-purple-600 flex-shrink-0" />,
+    google: <Chrome className="w-5 h-5 text-red-500" />,
+    microsoft: <Briefcase className="w-5 h-5 text-blue-600" />,
+    keycloak: <Shield className="w-5 h-5 text-green-600" />,
+    oidc: <Shield className="w-5 h-5 text-purple-600" />,
   };
   
   return (
     <button
       onClick={() => onClick(provider.id)}
       disabled={loading}
-      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 active:bg-slate-100 dark:active:bg-slate-600 transition-colors disabled:opacity-50 min-w-0"
+      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
     >
-      {loading ? <Loader2 className="w-5 h-5 animate-spin text-slate-500 flex-shrink-0" /> : icons[provider.id] || icons.oidc}
-      <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{provider.name}</span>
+      {loading ? <Loader2 className="w-5 h-5 animate-spin text-slate-500" /> : icons[provider.id] || icons.oidc}
+      <span className="text-sm font-medium text-slate-700">{provider.name}</span>
     </button>
   );
 };
@@ -83,16 +82,11 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 dark:bg-slate-950 flex items-center justify-center p-4 safe-top safe-bottom relative">
-      {/* Theme Toggle - Top Right */}
-      <div className="absolute top-4 right-4">
-        <ThemeToggleButton className="text-slate-400 hover:text-white hover:bg-slate-800" />
-      </div>
-      
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <div className="flex items-center justify-center gap-3 mb-6 sm:mb-8">
-          <div className="h-10 w-10 sm:h-12 sm:w-12">
+        <div className="flex items-center justify-center gap-3 mb-8">
+          <div className="h-12 w-12">
             <svg viewBox="0 0 100 100" fill="none" className="w-full h-full">
               <path 
                 d="M15 30 C15 21.7157 21.7157 15 30 15 H55 L55 45 L85 75 H60 C51.7157 75 45 68.2843 45 60 V60 L15 30 Z" 
@@ -105,7 +99,7 @@ const LoginPage = () => {
             </svg>
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">EXOIN</h1>
+            <h1 className="text-2xl font-black text-white tracking-tight">EXOIN</h1>
             <div className="flex items-center gap-1">
               <div className="w-1 h-1 rounded-full bg-orange-500"></div>
               <span className="text-[8px] font-bold tracking-[0.3em] text-slate-400 uppercase">AFRICA</span>
@@ -114,20 +108,20 @@ const LoginPage = () => {
         </div>
 
         {/* Login Card */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 sm:p-8">
-          <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2">Welcome Back</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Sign in to your workspace</p>
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Welcome Back</h2>
+          <p className="text-slate-500 text-sm mb-6">Sign in to your workspace</p>
 
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg mb-6 flex items-center gap-2">
-              <AlertCircle size={18} className="flex-shrink-0" />
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-center gap-2">
+              <AlertCircle size={18} />
               <span className="text-sm">{error}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input
@@ -135,15 +129,14 @@ const LoginPage = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="your@email.com"
-                  className="w-full pl-10 pr-4 py-3 border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-base"
+                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                   required
-                  autoComplete="email"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input
@@ -151,9 +144,8 @@ const LoginPage = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-3 border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-base"
+                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                   required
-                  autoComplete="current-password"
                 />
               </div>
             </div>
@@ -161,7 +153,7 @@ const LoginPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-base"
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
@@ -172,14 +164,14 @@ const LoginPage = () => {
             <div className="mt-6">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200 dark:border-slate-600"></div>
+                  <div className="w-full border-t border-slate-200"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-3 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400">Or continue with</span>
+                  <span className="px-3 bg-white text-slate-500">Or continue with</span>
                 </div>
               </div>
               
-              <div className="mt-4 flex flex-col sm:flex-row gap-3">
+              <div className="mt-4 flex gap-3">
                 {ssoProviders.map((provider) => (
                   <SSOButton
                     key={provider.id}
@@ -193,7 +185,7 @@ const LoginPage = () => {
           )}
 
           <div className="mt-6 text-center">
-            <p className="text-xs text-slate-400 dark:text-slate-500">
+            <p className="text-xs text-slate-400">
               Forgot your password? Contact your administrator
             </p>
           </div>

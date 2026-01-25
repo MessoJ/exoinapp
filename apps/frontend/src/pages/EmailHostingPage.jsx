@@ -1596,202 +1596,11 @@ const MailboxSettingsModal = ({ isOpen, onClose, mailbox, domain, onUpdate, onUp
   );
 };
 
-// Gmail Deliverability Panel - Check if emails will be accepted by Gmail
-const GmailDeliverabilityPanel = ({ domainId }) => {
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState(null);
-
-  const checkDeliverability = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await emailHostingApi.checkGmailDeliverability(domainId);
-      setResult(res.data);
-    } catch (err) {
-      console.error('Failed to check deliverability:', err);
-      setError(err.response?.data?.error || 'Failed to check deliverability');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getScoreColor = (score) => {
-    if (score >= 90) return 'text-green-600';
-    if (score >= 70) return 'text-yellow-600';
-    if (score >= 50) return 'text-orange-600';
-    return 'text-red-600';
-  };
-
-  const getScoreBg = (score) => {
-    if (score >= 90) return 'bg-green-50 border-green-200';
-    if (score >= 70) return 'bg-yellow-50 border-yellow-200';
-    if (score >= 50) return 'bg-orange-50 border-orange-200';
-    return 'bg-red-50 border-red-200';
-  };
-
-  const getScoreLabel = (status) => {
-    switch (status) {
-      case 'excellent': return 'Excellent';
-      case 'good': return 'Good';
-      case 'fair': return 'Needs Improvement';
-      case 'poor': return 'Poor';
-      default: return 'Unknown';
-    }
-  };
-
-  const CheckItem = ({ check }) => (
-    <div className="flex items-start gap-3 py-3 border-b border-gray-100 last:border-0">
-      <div className="flex-shrink-0 mt-0.5">
-        {check.passed ? (
-          <CheckCircleIcon className="w-5 h-5 text-green-600" />
-        ) : (
-          <XCircleIcon className="w-5 h-5 text-red-500" />
-        )}
-      </div>
-      <div className="flex-1">
-        <div className="flex items-center gap-2">
-          <p className={`text-sm font-medium ${check.passed ? 'text-gray-900' : 'text-red-800'}`}>
-            {check.name}
-          </p>
-          {check.critical && (
-            <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded">Critical</span>
-          )}
-        </div>
-        <p className="text-xs text-gray-500 mt-0.5">{check.message}</p>
-        {!check.passed && check.howToFix && (
-          <div className="mt-2 p-2 bg-amber-50 rounded-lg">
-            <p className="text-xs text-amber-800">
-              <span className="font-medium">How to fix: </span>
-              {check.howToFix}
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <ShieldCheckIcon className="w-5 h-5 text-blue-600" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">Gmail Deliverability</h3>
-            <p className="text-sm text-gray-500">Check if your emails will be accepted by Gmail</p>
-          </div>
-        </div>
-        <button
-          onClick={checkDeliverability}
-          disabled={loading}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
-        >
-          {loading ? (
-            <>
-              <ArrowPathIcon className="w-4 h-4 animate-spin" />
-              Checking...
-            </>
-          ) : (
-            <>
-              <ShieldCheckIcon className="w-4 h-4" />
-              Run Check
-            </>
-          )}
-        </button>
-      </div>
-
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-700">{error}</p>
-        </div>
-      )}
-
-      {result && (
-        <div className="space-y-4">
-          {/* Score Display */}
-          <div className={`p-4 rounded-xl border ${getScoreBg(result.score)}`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Deliverability Score</p>
-                <p className={`text-4xl font-bold ${getScoreColor(result.score)}`}>{result.score}/100</p>
-              </div>
-              <div className="text-right">
-                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                  result.status === 'excellent' ? 'bg-green-100 text-green-800' :
-                  result.status === 'good' ? 'bg-yellow-100 text-yellow-800' :
-                  result.status === 'fair' ? 'bg-orange-100 text-orange-800' :
-                  'bg-red-100 text-red-800'
-                }`}>
-                  {getScoreLabel(result.status)}
-                </span>
-                <p className="text-xs text-gray-500 mt-2">
-                  {result.checks?.filter(c => c.passed).length || 0}/{result.checks?.length || 0} checks passed
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Check Details */}
-          <div className="bg-gray-50 rounded-xl p-4">
-            <h4 className="font-medium text-gray-900 mb-3">Security Checks</h4>
-            <div className="bg-white rounded-lg divide-y divide-gray-100">
-              {result.checks?.map((check, idx) => (
-                <CheckItem key={idx} check={check} />
-              ))}
-            </div>
-          </div>
-
-          {/* Recommendations */}
-          {result.recommendations && result.recommendations.length > 0 && (
-            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-              <h4 className="font-medium text-amber-800 mb-2 flex items-center gap-2">
-                <ExclamationTriangleIcon className="w-5 h-5" />
-                Recommendations
-              </h4>
-              <ul className="space-y-2">
-                {result.recommendations.map((rec, idx) => (
-                  <li key={idx} className="text-sm text-amber-700 flex items-start gap-2">
-                    <span className="text-amber-500 mt-0.5">•</span>
-                    <span>{rec}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {result.status === 'excellent' && (
-            <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
-              <div className="flex items-center gap-2 text-green-800">
-                <CheckCircleIcon className="w-5 h-5" />
-                <p className="font-medium">Excellent! Your domain is well-configured for Gmail delivery.</p>
-              </div>
-              <p className="text-sm text-green-700 mt-1">
-                Emails from this domain should be accepted by Gmail without issues.
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {!result && !loading && (
-        <div className="text-center py-8 text-gray-500">
-          <ShieldCheckIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-          <p className="text-sm">Click "Run Check" to verify your domain's email deliverability to Gmail</p>
-          <p className="text-xs mt-1">This checks SPF, DKIM, DMARC, PTR records, and more</p>
-        </div>
-      )}
-    </div>
-  );
-};
-
 // DNS Records Panel - Enhanced with clear instructions
 const DNSRecordsPanel = ({ domainId, domainName, onVerify }) => {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(false);
-  const [regenerating, setRegenerating] = useState(false);
   const [verificationResults, setVerificationResults] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
   const [expandedRecord, setExpandedRecord] = useState(null);
@@ -1822,22 +1631,6 @@ const DNSRecordsPanel = ({ domainId, domainName, onVerify }) => {
       console.error('Failed to verify DNS:', error);
     } finally {
       setVerifying(false);
-    }
-  };
-
-  const handleRegenerate = async () => {
-    if (!confirm('This will regenerate all DNS records including new DKIM keys. Continue?')) {
-      return;
-    }
-    setRegenerating(true);
-    try {
-      const res = await emailHostingApi.regenerateDNS(domainId);
-      setRecords(res.data.records);
-      setVerificationResults(null);
-    } catch (error) {
-      console.error('Failed to regenerate DNS records:', error);
-    } finally {
-      setRegenerating(false);
     }
   };
 
@@ -1875,12 +1668,8 @@ const DNSRecordsPanel = ({ domainId, domainName, onVerify }) => {
     );
   }
 
-  const requiredRecords = records.filter(r => r.isRequired);
-  const optionalRecords = records.filter(r => !r.isRequired);
-  const verifiedRequiredCount = requiredRecords.filter(r => r.isVerified).length;
-  const verifiedOptionalCount = optionalRecords.filter(r => r.isVerified).length;
-  const totalRequired = requiredRecords.length;
-  const totalOptional = optionalRecords.length;
+  const verifiedCount = records.filter(r => r.isVerified).length;
+  const totalRequired = records.filter(r => r.isRequired).length;
 
   return (
     <div className="space-y-6">
@@ -1892,55 +1681,31 @@ const DNSRecordsPanel = ({ domainId, domainName, onVerify }) => {
             Add these records to your DNS provider to enable email for <strong>{domainName}</strong>
           </p>
         </div>
-        <div className="flex gap-2">
-          {records.length === 0 && (
-            <button
-              onClick={handleRegenerate}
-              disabled={regenerating}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 disabled:opacity-50 transition-all shadow-sm hover:shadow"
-              title="Generate DNS records for this domain"
-            >
-              {regenerating ? (
-                <ArrowPathIcon className="w-5 h-5 animate-spin" />
-              ) : (
-                <ArrowPathIcon className="w-5 h-5" />
-              )}
-              Generate DNS
-            </button>
+        <button
+          onClick={handleVerify}
+          disabled={verifying}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-all shadow-sm hover:shadow"
+        >
+          {verifying ? (
+            <ArrowPathIcon className="w-5 h-5 animate-spin" />
+          ) : (
+            <ShieldCheckIcon className="w-5 h-5" />
           )}
-          <button
-            onClick={handleVerify}
-            disabled={verifying || records.length === 0}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-all shadow-sm hover:shadow"
-          >
-            {verifying ? (
-              <ArrowPathIcon className="w-5 h-5 animate-spin" />
-            ) : (
-              <ShieldCheckIcon className="w-5 h-5" />
-            )}
-            Verify All Records
-          </button>
-        </div>
+          Verify All Records
+        </button>
       </div>
 
       {/* Progress Bar */}
       <div className="bg-gray-100 rounded-full h-3 overflow-hidden">
         <div 
-          className={`h-full transition-all duration-500 ${verifiedRequiredCount === totalRequired ? 'bg-green-500' : 'bg-blue-500'}`}
-          style={{ width: `${(verifiedRequiredCount / Math.max(totalRequired, 1)) * 100}%` }}
+          className={`h-full transition-all duration-500 ${verifiedCount === totalRequired ? 'bg-green-500' : 'bg-blue-500'}`}
+          style={{ width: `${(verifiedCount / Math.max(totalRequired, 1)) * 100}%` }}
         />
       </div>
-      <div className="flex justify-between text-sm text-gray-600 -mt-4">
-        <span>
-          <strong>{verifiedRequiredCount}</strong> of <strong>{totalRequired}</strong> required records verified
-          {verifiedRequiredCount === totalRequired && <span className="text-green-600 font-medium ml-2">✓ All set!</span>}
-        </span>
-        {totalOptional > 0 && (
-          <span className="text-gray-500">
-            + {verifiedOptionalCount}/{totalOptional} optional
-          </span>
-        )}
-      </div>
+      <p className="text-sm text-gray-600 -mt-4">
+        {verifiedCount} of {totalRequired} required records verified
+        {verifiedCount === totalRequired && <span className="text-green-600 font-medium ml-2">✓ All set!</span>}
+      </p>
 
       {/* Verification Results Alert */}
       {verificationResults && (
@@ -1987,14 +1752,11 @@ const DNSRecordsPanel = ({ domainId, domainName, onVerify }) => {
         </div>
       </div>
 
-      {/* Required DNS Records */}
+      {/* DNS Records List */}
       <div className="space-y-3">
-        <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
-          <span className="text-red-500">*</span> Required Records ({requiredRecords.length})
-        </h4>
-        {requiredRecords.map((record, index) => {
+        {records.map((record, index) => {
           const purpose = getRecordPurpose(record.recordType, record.name, record.value);
-          const description = record.description || getRecordDescription(record.recordType, record.name);
+          const description = getRecordDescription(record.recordType, record.name);
           const isExpanded = expandedRecord === record.id;
           
           return (
@@ -2108,71 +1870,6 @@ const DNSRecordsPanel = ({ domainId, domainName, onVerify }) => {
           );
         })}
       </div>
-
-      {/* Optional DNS Records */}
-      {optionalRecords.length > 0 && (
-        <div className="space-y-3">
-          <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-            Optional Records ({optionalRecords.length}) - For email client auto-configuration
-          </h4>
-          {optionalRecords.map((record, index) => {
-            const purpose = getRecordPurpose(record.recordType, record.name, record.value);
-            const description = record.description || getRecordDescription(record.recordType, record.name);
-            const isExpanded = expandedRecord === record.id;
-            
-            return (
-              <div 
-                key={record.id} 
-                className={`bg-white border rounded-xl overflow-hidden transition-all ${
-                  record.isVerified ? 'border-green-200 bg-green-50/30' : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <div className="p-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">{purpose.icon}</span>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <DNSTypeBadge type={record.recordType} />
-                        <span className="font-medium text-gray-700 text-sm">{purpose.label}</span>
-                        {record.isVerified && (
-                          <CheckCircleIcon className="w-4 h-4 text-green-500" />
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-500">{description}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setExpandedRecord(isExpanded ? null : record.id)}
-                    className="px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-lg font-medium text-xs transition-colors"
-                  >
-                    {isExpanded ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-                {isExpanded && (
-                  <div className="border-t border-gray-100 bg-gray-50 p-3 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded text-xs font-mono">
-                        {record.name === '@' ? '@' : `${record.name}.${domainName}`}
-                      </code>
-                      <button onClick={() => copyToClipboard(record.name, `name-${record.id}`)} className="p-2 hover:bg-gray-200 rounded">
-                        <ClipboardDocumentIcon className="w-4 h-4 text-gray-500" />
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded text-xs font-mono break-all">
-                        {record.value}
-                      </code>
-                      <button onClick={() => copyToClipboard(record.value, `value-${record.id}`)} className="p-2 hover:bg-gray-200 rounded">
-                        <ClipboardDocumentIcon className="w-4 h-4 text-gray-500" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
 
       {/* Step by Step Instructions */}
       <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-6">
@@ -3108,9 +2805,6 @@ export default function EmailHostingPage() {
                       </div>
                     </div>
                   </div>
-
-                  {/* Gmail Deliverability Check */}
-                  <GmailDeliverabilityPanel domainId={selectedDomain.id} />
 
                   {/* Danger Zone */}
                   <div className="bg-red-50 border border-red-200 rounded-xl p-6">

@@ -119,18 +119,6 @@ export default async function emailHostingRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Regenerate DNS records for domain (fixes missing records)
-  fastify.post('/domains/:domainId/regenerate-dns', async (request: FastifyRequest<{ Params: { domainId: string } }>, reply: FastifyReply) => {
-    try {
-      const { domainId } = request.params;
-      const records = await emailHostingService.regenerateDNSRecords(domainId);
-      return { success: true, records, message: 'DNS records regenerated successfully' };
-    } catch (error: any) {
-      console.error('Error regenerating DNS records:', error);
-      return reply.status(500).send({ success: false, error: error.message });
-    }
-  });
-
   // Verify DNS records
   fastify.post('/domains/:domainId/verify', async (request: FastifyRequest<{ Params: { domainId: string } }>, reply: FastifyReply) => {
     try {
@@ -151,69 +139,6 @@ export default async function emailHostingRoutes(fastify: FastifyInstance) {
       return { success: true, stats };
     } catch (error: any) {
       console.error('Error fetching domain stats:', error);
-      return reply.status(500).send({ success: false, error: error.message });
-    }
-  });
-
-  // Check Gmail deliverability - comprehensive check for Gmail acceptance
-  fastify.get('/domains/:domainId/gmail-check', async (request: FastifyRequest<{ Params: { domainId: string } }>, reply: FastifyReply) => {
-    try {
-      const { domainId } = request.params;
-      const result = await emailHostingService.checkGmailDeliverability(domainId);
-      return { success: true, ...result };
-    } catch (error: any) {
-      console.error('Error checking Gmail deliverability:', error);
-      return reply.status(500).send({ success: false, error: error.message });
-    }
-  });
-
-  // Check PTR record for server IP
-  fastify.post('/check-ptr', async (request: FastifyRequest<{ Body: { serverIP: string; hostname: string } }>, reply: FastifyReply) => {
-    try {
-      const { serverIP, hostname } = request.body;
-      if (!serverIP || !hostname) {
-        return reply.status(400).send({ success: false, error: 'serverIP and hostname are required' });
-      }
-      const result = await emailHostingService.checkPTRRecord(serverIP, hostname);
-      return { success: true, ...result };
-    } catch (error: any) {
-      console.error('Error checking PTR:', error);
-      return reply.status(500).send({ success: false, error: error.message });
-    }
-  });
-
-  // Check if IP is on blacklists
-  fastify.post('/check-blacklists', async (request: FastifyRequest<{ Body: { serverIP: string } }>, reply: FastifyReply) => {
-    try {
-      const { serverIP } = request.body;
-      if (!serverIP) {
-        return reply.status(400).send({ success: false, error: 'serverIP is required' });
-      }
-      const result = await emailHostingService.checkBlacklists(serverIP);
-      return { success: true, ...result };
-    } catch (error: any) {
-      console.error('Error checking blacklists:', error);
-      return reply.status(500).send({ success: false, error: error.message });
-    }
-  });
-
-  // Upgrade DMARC policy
-  fastify.post('/domains/:domainId/upgrade-dmarc', async (request: FastifyRequest<{ 
-    Params: { domainId: string }; 
-    Body: { policy: 'none' | 'quarantine' | 'reject' } 
-  }>, reply: FastifyReply) => {
-    try {
-      const { domainId } = request.params;
-      const { policy } = request.body;
-      
-      if (!['none', 'quarantine', 'reject'].includes(policy)) {
-        return reply.status(400).send({ success: false, error: 'Policy must be none, quarantine, or reject' });
-      }
-      
-      await emailHostingService.upgradeDmarcPolicy(domainId, policy);
-      return { success: true, message: `DMARC policy updated to ${policy}` };
-    } catch (error: any) {
-      console.error('Error upgrading DMARC:', error);
       return reply.status(500).send({ success: false, error: error.message });
     }
   });

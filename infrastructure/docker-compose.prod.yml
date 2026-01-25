@@ -12,8 +12,10 @@ services:
     volumes:
       - ./nginx/nginx.app.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - frontend
-      - backend
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
     networks:
       - exoin-net
     restart: unless-stopped
@@ -72,6 +74,12 @@ services:
     networks:
       - exoin-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))" ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   # --- DATABASE ---
   db:

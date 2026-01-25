@@ -396,26 +396,21 @@ const ExoinInvoices = () => {
   const [activeOption, setActiveOption] = useState('option2'); 
 
   return (
-    <div className="min-h-screen bg-slate-100 font-sans text-slate-800 flex flex-col items-center py-6 sm:py-12 px-3 sm:px-4">
+    <div className="min-h-screen bg-slate-100 font-sans text-slate-800 flex flex-col items-center py-12 px-4">
       
-      <div className="mb-6 sm:mb-8 text-center">
-        <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-2">Final Invoice Template</h2>
+      <div className="mb-8 text-center">
+        <h2 className="text-2xl font-bold text-slate-800 mb-2">Final Invoice Template</h2>
         <p className="text-slate-500 text-sm">Ready for Production • A4 Standard</p>
       </div>
 
-      {/* Scaled container for mobile */}
-      <div className="w-full overflow-x-auto pb-4">
-        <div className="transform origin-top scale-[0.5] sm:scale-[0.7] lg:scale-100 mx-auto" style={{ width: '595px' }}>
-          <InvoiceTemplate mode="view" />
-        </div>
-      </div>
+      <InvoiceTemplate mode="view" />
 
-      <div className="mt-4 sm:mt-8 flex gap-2 sm:gap-4">
-         <button className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-slate-900 text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-slate-800 active:bg-slate-700">
-            <Printer size={14} /> <span className="hidden sm:inline">Print</span>
+      <div className="mt-8 flex gap-4">
+         <button className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-slate-800">
+            <Printer size={14} /> Print
          </button>
-         <button className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-slate-50 active:bg-slate-100">
-            <Download size={14} /> <span className="hidden sm:inline">PDF</span>
+         <button className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-slate-50">
+            <Download size={14} /> PDF
          </button>
       </div>
 

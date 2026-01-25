@@ -538,125 +538,98 @@ const LetterheadPage = () => {
     }
   };
 
-  // Mobile state for toggling editor/preview
-  const [mobileView, setMobileView] = useState('editor');
-
   return (
     <div className="flex flex-col h-screen bg-slate-100 overflow-hidden">
       {/* Top Bar */}
-      <div className="bg-white border-b border-slate-200 px-3 sm:px-6 py-3 flex justify-between items-center shrink-0 z-20">
-        <div className="flex items-center gap-2 sm:gap-3">
+      <div className="bg-white border-b border-slate-200 px-6 py-3 flex justify-between items-center shrink-0 z-20">
+        <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors">
             <ArrowLeft size={18} />
           </button>
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
-            <FileText className="text-white" size={16} />
+          <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
+            <FileText className="text-white" size={20} />
           </div>
-          <div className="hidden sm:block">
+          <div>
             <h1 className="text-lg font-bold text-slate-900">Letterhead Editor</h1>
             <p className="text-xs text-slate-500">
               Official Correspondence 
               {totalPages > 1 && <span className="ml-1 text-orange-600 font-medium">• {totalPages} pages</span>}
             </p>
           </div>
-          <div className="sm:hidden">
-            <h1 className="text-sm font-bold text-slate-900">Letterhead</h1>
-          </div>
         </div>
         
         <div className="flex items-center gap-1">
-          <div className="hidden sm:block">
-            <SignaturePicker onSelect={handleSignatureSelect} currentSignature={signature} compact />
-          </div>
-          <div className="hidden sm:block h-5 w-px bg-slate-200 mx-2"></div>
-          <button onClick={handleSave} className="p-2 sm:p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Save Draft">
-            <Save size={16} />
+          <SignaturePicker onSelect={handleSignatureSelect} currentSignature={signature} compact />
+          <div className="h-5 w-px bg-slate-200 mx-2"></div>
+          <button onClick={handleSave} className="p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Save Draft">
+            <Save size={18} />
           </button>
-          <button onClick={handleDownloadPDF} disabled={downloading} className="p-2 sm:p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50" title="Download PDF">
-            {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+          <button onClick={handleDownloadPDF} disabled={downloading} className="p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50" title="Download PDF">
+            {downloading ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
           </button>
-          <button onClick={() => setShowShareModal(true)} className="hidden sm:flex p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Share">
+          <button onClick={() => setShowShareModal(true)} className="p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Share">
             <Share2 size={18} />
           </button>
-          <button onClick={handleSendEmail} className="ml-1 px-3 sm:px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors shadow-sm flex items-center gap-1 sm:gap-2 text-sm font-medium" title="Send via Email">
-            <Mail size={16} /> <span className="hidden sm:inline">Send</span>
+          <button onClick={handleSendEmail} className="ml-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors shadow-sm flex items-center gap-2 text-sm font-medium" title="Send via Email">
+            <Mail size={16} /> Send
           </button>
         </div>
       </div>
 
       {/* Document Details Bar */}
-      <div className="bg-white border-b border-slate-200 px-3 sm:px-6 py-3 shrink-0 overflow-x-auto">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2 sm:gap-4 min-w-fit">
+      <div className="bg-white border-b border-slate-200 px-6 py-3 shrink-0">
+        <div className="grid grid-cols-7 gap-4">
           <div>
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date</label>
             <input type="text" value={formData.date} onChange={(e) => handleUpdate('date', e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none px-2 sm:px-3 py-1.5 text-sm text-slate-900 rounded-lg transition-colors" />
+              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none px-3 py-1.5 text-sm text-slate-900 rounded-lg transition-colors" />
           </div>
           <div>
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Recipient</label>
             <input type="text" value={formData.recipientName} onChange={(e) => handleUpdate('recipientName', e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none px-2 sm:px-3 py-1.5 text-sm text-slate-900 rounded-lg transition-colors" placeholder="Recipient" />
+              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none px-3 py-1.5 text-sm text-slate-900 rounded-lg transition-colors" placeholder="Recipient name" />
           </div>
           <div>
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Company</label>
             <input type="text" value={formData.company} onChange={(e) => handleUpdate('company', e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none px-2 sm:px-3 py-1.5 text-sm text-slate-900 rounded-lg transition-colors" placeholder="Company" />
+              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none px-3 py-1.5 text-sm text-slate-900 rounded-lg transition-colors" placeholder="Company name" />
           </div>
           <div>
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Subject</label>
             <input type="text" value={formData.subject} onChange={(e) => handleUpdate('subject', e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none px-2 sm:px-3 py-1.5 text-sm text-slate-900 rounded-lg transition-colors" placeholder="Subject" />
+              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none px-3 py-1.5 text-sm text-slate-900 rounded-lg transition-colors" placeholder="Letter subject" />
           </div>
           <div>
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Your Name</label>
             <input type="text" value={senderName} onChange={(e) => setSenderName(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none px-2 sm:px-3 py-1.5 text-sm text-slate-900 rounded-lg transition-colors" placeholder="Full name" />
+              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none px-3 py-1.5 text-sm text-slate-900 rounded-lg transition-colors" placeholder="Your full name" />
           </div>
           <div>
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Your Title</label>
             <input type="text" value={senderTitle} onChange={(e) => setSenderTitle(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none px-2 sm:px-3 py-1.5 text-sm text-slate-900 rounded-lg transition-colors" placeholder="Title" />
+              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none px-3 py-1.5 text-sm text-slate-900 rounded-lg transition-colors" placeholder="Job title" />
           </div>
           <div>
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Sig. Label</label>
             <input type="text" value={signatureLabel} onChange={(e) => setSignatureLabel(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none px-2 sm:px-3 py-1.5 text-sm text-slate-900 rounded-lg transition-colors" placeholder="Signature" />
+              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none px-3 py-1.5 text-sm text-slate-900 rounded-lg transition-colors" placeholder="e.g. Authorized Signature" />
           </div>
         </div>
-      </div>
-
-      {/* Mobile View Toggle */}
-      <div className="lg:hidden bg-white border-b border-slate-200 px-3 py-2 flex justify-center gap-2">
-        <button
-          onClick={() => setMobileView('editor')}
-          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${mobileView === 'editor' ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-600'}`}
-        >
-          <Edit3 size={14} className="inline mr-1" /> Editor
-        </button>
-        <button
-          onClick={() => setMobileView('preview')}
-          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${mobileView === 'preview' ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-600'}`}
-        >
-          <FileText size={14} className="inline mr-1" /> Preview
-        </button>
       </div>
 
       {/* Main Split View */}
       <div ref={containerRef} className="flex-1 flex overflow-hidden">
         {/* Left: Enhanced Editor */}
-        <div className={`bg-white border-r border-slate-200 flex flex-col ${mobileView === 'preview' ? 'hidden lg:flex' : 'flex'}`} style={{ width: typeof window !== 'undefined' && window.innerWidth < 1024 ? '100%' : `${editorWidth}%` }}>
+        <div className="bg-white border-r border-slate-200 flex flex-col" style={{ width: `${editorWidth}%` }}>
           <div className="p-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
               <Edit3 size={14} className="text-orange-500" /> Content Editor
             </span>
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-slate-400">{content.replace(/<[^>]*>/g, '').length} chars</span>
-              <button onClick={() => setEditorWidth(editorWidth < 50 ? 60 : 40)} className="hidden lg:flex p-1.5 hover:bg-slate-200 rounded text-slate-400 transition-colors" title={editorWidth < 50 ? 'Expand Editor' : 'Shrink Editor'}>
+              <button onClick={() => setEditorWidth(editorWidth < 50 ? 60 : 40)} className="p-1.5 hover:bg-slate-200 rounded text-slate-400 transition-colors" title={editorWidth < 50 ? 'Expand Editor' : 'Shrink Editor'}>
                 {editorWidth < 50 ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
               </button>
-              <div className="lg:hidden">
-                <SignaturePicker onSelect={handleSignatureSelect} currentSignature={signature} compact />
-              </div>
             </div>
           </div>
           <div className="flex-1 overflow-hidden">
@@ -666,32 +639,31 @@ const LetterheadPage = () => {
           </div>
         </div>
 
-        {/* Resize Handle - Hidden on mobile */}
-        <div className="hidden lg:flex w-1.5 bg-slate-200 hover:bg-orange-400 cursor-col-resize items-center justify-center transition-colors group" onMouseDown={() => setIsResizing(true)}>
+        {/* Resize Handle */}
+        <div className="w-1.5 bg-slate-200 hover:bg-orange-400 cursor-col-resize flex items-center justify-center transition-colors group" onMouseDown={() => setIsResizing(true)}>
           <GripVertical size={10} className="text-slate-400 group-hover:text-white transition-colors" />
         </div>
 
         {/* Right: Preview */}
-        <div ref={previewRef} className={`bg-slate-300 p-3 sm:p-6 overflow-y-auto flex flex-col items-center ${mobileView === 'editor' ? 'hidden lg:flex' : 'flex'}`} style={{ width: typeof window !== 'undefined' && window.innerWidth < 1024 ? '100%' : `${100 - editorWidth - 0.5}%` }}>
+        <div ref={previewRef} className="bg-slate-300 p-6 overflow-y-auto flex flex-col items-center" style={{ width: `${100 - editorWidth - 0.5}%` }}>
           {totalPages > 1 && (
-            <div className="mb-4 flex items-center gap-2 sm:gap-3 bg-white rounded-full px-3 sm:px-4 py-2 shadow-md">
+            <div className="mb-4 flex items-center gap-3 bg-white rounded-full px-4 py-2 shadow-md">
               <button onClick={goToPrevPage} disabled={currentPreviewPage === 1} className="p-1 hover:bg-slate-100 rounded-full disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
                 <ChevronLeft size={18} />
               </button>
-              <span className="text-xs sm:text-sm font-medium text-slate-700 min-w-[60px] sm:min-w-[80px] text-center">Page {currentPreviewPage} / {totalPages}</span>
+              <span className="text-sm font-medium text-slate-700 min-w-[80px] text-center">Page {currentPreviewPage} / {totalPages}</span>
               <button onClick={goToNextPage} disabled={currentPreviewPage === totalPages} className="p-1 hover:bg-slate-100 rounded-full disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
                 <ChevronRight size={18} />
               </button>
             </div>
           )}
 
-          <div className="mb-4 text-[10px] text-slate-500 flex items-center gap-2 sm:gap-4">
+          <div className="mb-4 text-[10px] text-slate-500 flex items-center gap-4">
             <span className="bg-white/80 px-2 py-1 rounded">A4 Format</span>
             <span className="bg-white/80 px-2 py-1 rounded">{totalPages === 1 ? 'Single Page' : `${totalPages} Pages`}</span>
           </div>
 
-          {/* Scaled preview container for mobile */}
-          <div className="space-y-8 transform origin-top scale-[0.5] sm:scale-[0.65] lg:scale-100 w-[595px]">
+          <div className="space-y-8">
             {contentPages.map((pageContent, i) => {
               const isFirst = i === 0;
               const isLast = i === contentPages.length - 1;

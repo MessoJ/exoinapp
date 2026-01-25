@@ -5,15 +5,14 @@ import {
   Receipt, ChevronDown, ChevronRight, Server, PenTool, Inbox,
   LayoutGrid, Plus, CreditCard, Monitor, Briefcase, Palette,
   Building, Shield, UserCog, Folders, FileSpreadsheet,
-  ChevronLeft, Menu, Home, FolderOpen, Image, X
+  ChevronLeft, Menu, Home, FolderOpen, Image
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { mailApi } from '../../lib/api';
 import Logo from '../templates/Logo';
-import { ThemeDropdown } from '../ui/ThemeToggle';
 
 // Sidebar Navigation Item with optional children
-const NavItem = ({ to, icon: Icon, label, badge, children, isActive, collapsed, onNavigate }) => {
+const NavItem = ({ to, icon: Icon, label, badge, children, isActive, collapsed }) => {
   const [expanded, setExpanded] = useState(false);
   const location = useLocation();
   
@@ -27,25 +26,15 @@ const NavItem = ({ to, icon: Icon, label, badge, children, isActive, collapsed, 
     if (hasActiveChild) setExpanded(true);
   }, [hasActiveChild]);
 
-  const handleClick = () => {
-    if (hasChildren) {
-      setExpanded(!expanded);
-    }
-  };
-
-  const handleChildClick = () => {
-    if (onNavigate) onNavigate();
-  };
-
   if (hasChildren) {
     return (
       <div>
         <button
-          onClick={handleClick}
+          onClick={() => setExpanded(!expanded)}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
             hasActiveChild 
-              ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400' 
-              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+              ? 'bg-orange-50 text-orange-600' 
+              : 'text-slate-600 hover:bg-slate-50'
           }`}
         >
           <Icon size={18} className="flex-shrink-0" />
@@ -61,16 +50,15 @@ const NavItem = ({ to, icon: Icon, label, badge, children, isActive, collapsed, 
         </button>
         
         {!collapsed && expanded && (
-          <div className="ml-4 pl-3 border-l-2 border-slate-100 dark:border-slate-700 mt-1 space-y-0.5">
+          <div className="ml-4 pl-3 border-l-2 border-slate-100 mt-1 space-y-0.5">
             {children.map((child, idx) => (
               <Link
                 key={idx}
                 to={child.to}
-                onClick={handleChildClick}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                   location.pathname === child.to || location.pathname.startsWith(child.to + '/')
-                    ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 font-medium'
-                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200'
+                    ? 'bg-orange-50 text-orange-600 font-medium'
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                 }`}
               >
                 {child.icon && <child.icon size={14} />}
@@ -91,11 +79,10 @@ const NavItem = ({ to, icon: Icon, label, badge, children, isActive, collapsed, 
   return (
     <Link
       to={to}
-      onClick={onNavigate}
       className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
         isCurrentActive 
-          ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 font-medium' 
-          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+          ? 'bg-orange-50 text-orange-600 font-medium' 
+          : 'text-slate-600 hover:bg-slate-50'
       }`}
       title={collapsed ? label : undefined}
     >
@@ -118,13 +105,13 @@ const NavItem = ({ to, icon: Icon, label, badge, children, isActive, collapsed, 
 const SectionHeader = ({ label, collapsed }) => {
   if (collapsed) return <div className="h-4" />;
   return (
-    <div className="px-3 py-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+    <div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
       {label}
     </div>
   );
 };
 
-const CollapsibleSidebar = ({ onCloseMobile }) => {
+const CollapsibleSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -153,11 +140,6 @@ const CollapsibleSidebar = ({ onCloseMobile }) => {
   const handleLogout = () => {
     logout();
     navigate('/login');
-  };
-
-  const handleNavigate = () => {
-    // Close mobile menu on navigation
-    if (onCloseMobile) onCloseMobile();
   };
 
   const isAdmin = user?.role === 'ADMIN';
@@ -261,26 +243,16 @@ const CollapsibleSidebar = ({ onCloseMobile }) => {
 
   return (
     <aside 
-      className={`bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 flex flex-col transition-all duration-300 h-full ${
+      className={`bg-white border-r border-slate-200 flex flex-col transition-all duration-300 ${
         collapsed ? 'w-16' : 'w-64'
       }`}
     >
       {/* Header */}
-      <div className={`p-4 border-b border-slate-100 dark:border-slate-800 flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
+      <div className={`p-4 border-b border-slate-100 flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
         {!collapsed && <Logo className="scale-75 origin-left" />}
-        
-        {/* Close button for mobile */}
-        <button
-          onClick={onCloseMobile}
-          className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 transition-colors lg:hidden"
-        >
-          <X size={18} />
-        </button>
-        
-        {/* Collapse button for desktop */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 transition-colors hidden lg:block"
+          className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors"
         >
           {collapsed ? <Menu size={18} /> : <ChevronLeft size={18} />}
         </button>
@@ -297,7 +269,6 @@ const CollapsibleSidebar = ({ onCloseMobile }) => {
                   key={itemIdx}
                   {...item}
                   collapsed={collapsed}
-                  onNavigate={handleNavigate}
                 />
               ))}
             </div>
@@ -306,27 +277,21 @@ const CollapsibleSidebar = ({ onCloseMobile }) => {
       </nav>
 
       {/* User Section */}
-      <div className={`p-3 border-t border-slate-100 dark:border-slate-800 ${collapsed ? 'text-center' : ''}`}>
+      <div className={`p-3 border-t border-slate-100 ${collapsed ? 'text-center' : ''}`}>
         {!collapsed && (
           <div className="flex items-center gap-3 px-3 py-2 mb-2">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-semibold text-sm">
               {user?.name?.charAt(0) || 'U'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{user?.name || 'User'}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user?.role || 'Staff'}</p>
+              <p className="text-sm font-medium text-slate-900 truncate">{user?.name || 'User'}</p>
+              <p className="text-xs text-slate-500 truncate">{user?.role || 'Staff'}</p>
             </div>
           </div>
         )}
-        
-        {/* Theme Toggle */}
-        <div className="mb-2">
-          <ThemeDropdown collapsed={collapsed} />
-        </div>
-        
         <button 
           onClick={handleLogout}
-          className={`flex items-center gap-3 px-3 py-2.5 w-full text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors ${collapsed ? 'justify-center' : ''}`}
+          className={`flex items-center gap-3 px-3 py-2.5 w-full text-red-600 hover:bg-red-50 rounded-lg transition-colors ${collapsed ? 'justify-center' : ''}`}
           title={collapsed ? 'Logout' : undefined}
         >
           <LogOut size={18} />

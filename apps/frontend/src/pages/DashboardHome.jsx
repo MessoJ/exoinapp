@@ -90,127 +90,127 @@ const DashboardHome = () => {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+          <h1 className="text-2xl font-bold text-slate-900">
             Welcome back, {user?.name?.split(' ')[0] || 'User'}!
           </h1>
-          <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400">Here's what's happening with your documents today.</p>
+          <p className="text-slate-500">Here's what's happening with your documents today.</p>
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 -mx-3 px-3 sm:mx-0 sm:px-0">
+        <div className="flex gap-2">
           <Link 
             to="/mail?compose=true"
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors text-sm whitespace-nowrap"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
           >
-            <Mail size={16} />
-            <span className="hidden sm:inline">Compose</span>
+            <Mail size={18} />
+            Compose
           </Link>
           <Link 
             to="/documents/new?type=INVOICE"
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors text-sm whitespace-nowrap"
+            className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors"
           >
-            <Plus size={16} />
-            <span>Invoice</span>
+            <Plus size={18} />
+            New Invoice
           </Link>
           <Link 
             to="/documents/new?type=QUOTATION"
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-medium transition-colors text-sm whitespace-nowrap"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-medium transition-colors"
           >
-            <Plus size={16} />
-            <span>Quote</span>
+            <Plus size={18} />
+            New Quotation
           </Link>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Total Documents</p>
-              <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-1">{stats?.documentsCount || 0}</p>
+              <p className="text-sm text-slate-500">Total Documents</p>
+              <p className="text-3xl font-bold text-slate-900 mt-1">{stats?.documentsCount || 0}</p>
             </div>
-            <div className="h-10 w-10 sm:h-12 sm:w-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-              <FileText className="text-orange-600 dark:text-orange-400" size={20} />
+            <div className="h-12 w-12 bg-orange-100 rounded-lg flex items-center justify-center">
+              <FileText className="text-orange-600" size={24} />
             </div>
           </div>
-          <div className="mt-3 sm:mt-4 flex items-center gap-1 text-xs sm:text-sm">
-            <TrendingUp className="text-green-500" size={14} />
+          <div className="mt-4 flex items-center gap-1 text-sm">
+            <TrendingUp className="text-green-500" size={16} />
             <span className="text-green-600 font-medium">+12%</span>
-            <span className="text-slate-400 hidden sm:inline">from last month</span>
+            <span className="text-slate-400">from last month</span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Clients</p>
-              <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-1">{stats?.clientsCount || 0}</p>
+              <p className="text-sm text-slate-500">Clients</p>
+              <p className="text-3xl font-bold text-slate-900 mt-1">{stats?.clientsCount || 0}</p>
             </div>
-            <div className="h-10 w-10 sm:h-12 sm:w-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Users className="text-blue-600 dark:text-blue-400" size={20} />
+            <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Users className="text-blue-600" size={24} />
             </div>
           </div>
-          <div className="mt-3 sm:mt-4 flex items-center gap-1 text-xs sm:text-sm">
-            <TrendingUp className="text-green-500" size={14} />
+          <div className="mt-4 flex items-center gap-1 text-sm">
+            <TrendingUp className="text-green-500" size={16} />
             <span className="text-green-600 font-medium">+3</span>
-            <span className="text-slate-400 hidden sm:inline">new this month</span>
+            <span className="text-slate-400">new this month</span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Total Revenue</p>
-              <p className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white mt-1">{formatCurrency(stats?.totalRevenue || 0)}</p>
+              <p className="text-sm text-slate-500">Total Revenue</p>
+              <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(stats?.totalRevenue || 0)}</p>
             </div>
-            <div className="h-10 w-10 sm:h-12 sm:w-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <DollarSign className="text-green-600 dark:text-green-400" size={20} />
+            <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <DollarSign className="text-green-600" size={24} />
             </div>
           </div>
-          <div className="mt-3 sm:mt-4 flex items-center gap-1 text-xs sm:text-sm">
-            <TrendingUp className="text-green-500" size={14} />
+          <div className="mt-4 flex items-center gap-1 text-sm">
+            <TrendingUp className="text-green-500" size={16} />
             <span className="text-green-600 font-medium">+8.3%</span>
-            <span className="text-slate-400 hidden sm:inline">from last month</span>
+            <span className="text-slate-400">from last month</span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Pending</p>
-              <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-1">{stats?.pendingAmount || 0}</p>
+              <p className="text-sm text-slate-500">Pending</p>
+              <p className="text-3xl font-bold text-slate-900 mt-1">{stats?.pendingAmount || 0}</p>
             </div>
-            <div className="h-10 w-10 sm:h-12 sm:w-12 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center">
-              <Clock className="text-amber-600 dark:text-amber-400" size={20} />
+            <div className="h-12 w-12 bg-amber-100 rounded-lg flex items-center justify-center">
+              <Clock className="text-amber-600" size={24} />
             </div>
           </div>
-          <div className="mt-3 sm:mt-4 text-xs sm:text-sm">
-            <span className="text-slate-400">Pending approval</span>
+          <div className="mt-4 text-sm">
+            <span className="text-slate-400">Documents pending approval</span>
           </div>
         </div>
       </div>
 
       {/* Email Widget - NEW */}
       {mailStats.configured && (
-        <div className="bg-gradient-to-r from-blue-900 to-blue-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div className="bg-gradient-to-r from-blue-900 to-blue-800 rounded-2xl p-6 shadow-lg">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/10 rounded-xl flex items-center justify-center">
-                <Mail className="text-white" size={20} />
+              <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
+                <Mail className="text-white" size={24} />
               </div>
               <div>
-                <h2 className="text-base sm:text-lg font-semibold text-white">Email</h2>
-                <p className="text-blue-200 text-xs sm:text-sm">
+                <h2 className="text-lg font-semibold text-white">Email</h2>
+                <p className="text-blue-200 text-sm">
                   {mailStats.unread > 0 ? `${mailStats.unread} unread messages` : 'All caught up!'}
                 </p>
               </div>
             </div>
             <Link 
               to="/mail" 
-              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-white text-sm font-medium transition-colors flex items-center gap-2"
             >
               <Inbox size={16} />
               Open Inbox
@@ -231,7 +231,7 @@ const DashboardHome = () => {
                     <span className={`text-sm truncate ${!email.isRead ? 'font-semibold text-white' : 'text-blue-100'}`}>
                       {email.fromName || email.fromAddress?.split('@')[0] || 'Unknown'}
                     </span>
-                    <span className="text-xs text-blue-300 ml-2 flex-shrink-0">
+                    <span className="text-xs text-blue-300">
                       {new Date(email.sentAt).toLocaleDateString()}
                     </span>
                   </div>
@@ -251,45 +251,45 @@ const DashboardHome = () => {
       )}
 
       {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Documents */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
-          <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
-            <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white">Recent Documents</h2>
+        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-100">
+          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-slate-900">Recent Documents</h2>
             <Link to="/documents" className="text-orange-600 hover:text-orange-700 text-sm font-medium flex items-center gap-1">
               View all <ChevronRight size={16} />
             </Link>
           </div>
-          <div className="divide-y divide-slate-100 dark:divide-slate-700">
+          <div className="divide-y divide-slate-100">
             {recentDocuments.map((doc) => (
               <Link 
                 key={doc.id} 
                 to={`/documents/${doc.id}`}
-                className="p-3 sm:p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`h-9 w-9 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                    doc.type === 'INVOICE' ? 'bg-orange-100 dark:bg-orange-900/30' : 'bg-blue-100 dark:bg-blue-900/30'
+                <div className="flex items-center gap-3">
+                  <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+                    doc.type === 'INVOICE' ? 'bg-orange-100' : 'bg-blue-100'
                   }`}>
                     {doc.type === 'INVOICE' ? (
-                      <Receipt className="text-orange-600 dark:text-orange-400" size={18} />
+                      <Receipt className={`text-orange-600`} size={20} />
                     ) : (
-                      <FileSpreadsheet className="text-blue-600 dark:text-blue-400" size={18} />
+                      <FileSpreadsheet className={`text-blue-600`} size={20} />
                     )}
                   </div>
-                  <div className="min-w-0">
-                    <p className="font-medium text-slate-900 dark:text-white text-sm sm:text-base truncate">{doc.documentNumber}</p>
-                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 truncate">{doc.client?.name || 'No client'}</p>
+                  <div>
+                    <p className="font-medium text-slate-900">{doc.documentNumber}</p>
+                    <p className="text-sm text-slate-500">{doc.client?.name || 'No client'}</p>
                   </div>
                 </div>
-                <div className="text-right ml-3 flex-shrink-0">
-                  <p className="font-semibold text-slate-900 dark:text-white text-sm sm:text-base">{formatCurrency(doc.total)}</p>
-                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">{formatDate(doc.createdAt)}</p>
+                <div className="text-right">
+                  <p className="font-semibold text-slate-900">{formatCurrency(doc.total)}</p>
+                  <p className="text-sm text-slate-500">{formatDate(doc.createdAt)}</p>
                 </div>
               </Link>
             ))}
             {recentDocuments.length === 0 && (
-              <div className="p-6 sm:p-8 text-center text-slate-500 dark:text-slate-400">
+              <div className="p-8 text-center text-slate-500">
                 No documents yet. Create your first invoice or quotation!
               </div>
             )}
@@ -297,63 +297,63 @@ const DashboardHome = () => {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
-          <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-slate-700">
-            <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white">Recent Activity</h2>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100">
+          <div className="p-6 border-b border-slate-100">
+            <h2 className="text-lg font-semibold text-slate-900">Recent Activity</h2>
           </div>
           <div className="p-4 space-y-4">
             {activity.map((item, idx) => (
               <div key={idx} className="flex items-start gap-3">
-                <div className="h-8 w-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shrink-0 mt-0.5">
-                  <FileText className="text-orange-600 dark:text-orange-400" size={14} />
+                <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center shrink-0 mt-0.5">
+                  <FileText className="text-orange-600" size={14} />
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                <div>
+                  <p className="text-sm text-slate-700">
                     <span className="font-medium">{item.type}</span> {item.documentNumber}
                     {item.action && ` was ${item.action}`}
                   </p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500">{formatDate(item.createdAt)}</p>
+                  <p className="text-xs text-slate-400">{formatDate(item.createdAt)}</p>
                 </div>
               </div>
             ))}
             {activity.length === 0 && (
-              <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">No recent activity</p>
+              <p className="text-sm text-slate-500 text-center py-4">No recent activity</p>
             )}
           </div>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl sm:rounded-2xl p-4 sm:p-6">
-        <h2 className="text-base sm:text-lg font-semibold text-white mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-4">
+      <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6">
+        <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Link 
             to="/documents/new?type=INVOICE"
-            className="bg-white/10 hover:bg-white/20 rounded-xl p-3 sm:p-4 text-center transition-colors"
+            className="bg-white/10 hover:bg-white/20 rounded-xl p-4 text-center transition-colors"
           >
-            <Receipt className="text-orange-400 mx-auto mb-1 sm:mb-2" size={20} />
-            <p className="text-white text-xs sm:text-sm font-medium">Invoice</p>
+            <Receipt className="text-orange-400 mx-auto mb-2" size={24} />
+            <p className="text-white text-sm font-medium">Create Invoice</p>
           </Link>
           <Link 
             to="/documents/new?type=QUOTATION"
-            className="bg-white/10 hover:bg-white/20 rounded-xl p-3 sm:p-4 text-center transition-colors"
+            className="bg-white/10 hover:bg-white/20 rounded-xl p-4 text-center transition-colors"
           >
-            <FileSpreadsheet className="text-blue-400 mx-auto mb-1 sm:mb-2" size={20} />
-            <p className="text-white text-xs sm:text-sm font-medium">Quote</p>
+            <FileSpreadsheet className="text-blue-400 mx-auto mb-2" size={24} />
+            <p className="text-white text-sm font-medium">Create Quotation</p>
           </Link>
           <Link 
             to="/clients/new"
-            className="bg-white/10 hover:bg-white/20 rounded-xl p-3 sm:p-4 text-center transition-colors"
+            className="bg-white/10 hover:bg-white/20 rounded-xl p-4 text-center transition-colors"
           >
-            <Users className="text-green-400 mx-auto mb-1 sm:mb-2" size={20} />
-            <p className="text-white text-xs sm:text-sm font-medium">Client</p>
+            <Users className="text-green-400 mx-auto mb-2" size={24} />
+            <p className="text-white text-sm font-medium">Add Client</p>
           </Link>
           <Link 
             to="/mail"
-            className="bg-white/10 hover:bg-white/20 rounded-xl p-3 sm:p-4 text-center transition-colors relative hidden sm:block"
+            className="bg-white/10 hover:bg-white/20 rounded-xl p-4 text-center transition-colors relative"
           >
-            <Mail className="text-cyan-400 mx-auto mb-1 sm:mb-2" size={20} />
-            <p className="text-white text-xs sm:text-sm font-medium">Email</p>
+            <Mail className="text-cyan-400 mx-auto mb-2" size={24} />
+            <p className="text-white text-sm font-medium">Compose Email</p>
             {mailStats.unread > 0 && (
               <span className="absolute top-2 right-2 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center font-bold">
                 {mailStats.unread > 9 ? '9+' : mailStats.unread}
@@ -362,10 +362,10 @@ const DashboardHome = () => {
           </Link>
           <Link 
             to="/documents?type=LETTERHEAD"
-            className="bg-white/10 hover:bg-white/20 rounded-xl p-3 sm:p-4 text-center transition-colors hidden sm:block"
+            className="bg-white/10 hover:bg-white/20 rounded-xl p-4 text-center transition-colors"
           >
-            <FileText className="text-purple-400 mx-auto mb-1 sm:mb-2" size={20} />
-            <p className="text-white text-xs sm:text-sm font-medium">Letter</p>
+            <FileText className="text-purple-400 mx-auto mb-2" size={24} />
+            <p className="text-white text-sm font-medium">Letterhead</p>
           </Link>
         </div>
       </div>

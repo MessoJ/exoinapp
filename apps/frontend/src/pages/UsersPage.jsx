@@ -69,20 +69,20 @@ const UserCard = ({ user, onProvision, onLink, onToggleStatus, onDelete, onViewD
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 hover:shadow-lg hover:border-slate-300 transition-all group">
+    <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg hover:border-slate-300 transition-all group">
       {/* Header with Avatar and Actions */}
-      <div className="flex items-start justify-between mb-3 sm:mb-4">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br ${getAvatarGradient(user.role)} flex items-center justify-center text-white font-semibold text-sm sm:text-lg shadow-sm flex-shrink-0`}>
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getAvatarGradient(user.role)} flex items-center justify-center text-white font-semibold text-lg shadow-sm`}>
             {getInitials(user.firstName, user.lastName)}
           </div>
-          <div className="min-w-0">
-            <h3 className="font-semibold text-slate-900 text-sm sm:text-base truncate">{user.firstName} {user.lastName}</h3>
-            <p className="text-xs sm:text-sm text-slate-500 truncate">{user.jobTitle || 'Team Member'}</p>
+          <div>
+            <h3 className="font-semibold text-slate-900">{user.firstName} {user.lastName}</h3>
+            <p className="text-sm text-slate-500">{user.jobTitle || 'Team Member'}</p>
           </div>
         </div>
         <Menu as="div" className="relative">
-          <Menu.Button className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors sm:opacity-0 sm:group-hover:opacity-100">
+          <Menu.Button className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors opacity-0 group-hover:opacity-100">
             <MoreVertical size={16} />
           </Menu.Button>
           <Transition
@@ -133,12 +133,12 @@ const UserCard = ({ user, onProvision, onLink, onToggleStatus, onDelete, onViewD
       </div>
 
       {/* User Info */}
-      <div className="space-y-2 mb-3 sm:mb-4">
-        <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600">
-          <Mail size={14} className="text-slate-400 flex-shrink-0" />
+      <div className="space-y-2 mb-4">
+        <div className="flex items-center gap-2 text-sm text-slate-600">
+          <Mail size={14} className="text-slate-400" />
           <span className="truncate">{user.email}</span>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
           {getRoleBadge(user.role)}
           <span className={`px-2 py-0.5 text-xs rounded-full ${user.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
             {user.isActive ? 'Active' : 'Inactive'}
@@ -147,16 +147,16 @@ const UserCard = ({ user, onProvision, onLink, onToggleStatus, onDelete, onViewD
       </div>
 
       {/* Mailbox Status */}
-      <div className={`p-2.5 sm:p-3 rounded-lg ${user.hasMailbox ? 'bg-green-50 border border-green-200' : 'bg-slate-50 border border-slate-200'}`}>
+      <div className={`p-3 rounded-lg ${user.hasMailbox ? 'bg-green-50 border border-green-200' : 'bg-slate-50 border border-slate-200'}`}>
         {user.hasMailbox ? (
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <CheckCircle size={14} className="text-green-500 flex-shrink-0" />
-              <span className="text-xs sm:text-sm font-medium text-green-700 truncate">{user.primaryEmail}</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle size={16} className="text-green-500" />
+              <span className="text-sm font-medium text-green-700 truncate max-w-[140px]">{user.primaryEmail}</span>
             </div>
             <button 
               onClick={() => window.location.href = '/mail'}
-              className="p-1.5 bg-green-100 hover:bg-green-200 rounded-lg text-green-600 transition-colors flex-shrink-0"
+              className="p-1.5 bg-green-100 hover:bg-green-200 rounded-lg text-green-600 transition-colors"
               title="Open in Webmail"
             >
               <Inbox size={14} />
@@ -165,8 +165,8 @@ const UserCard = ({ user, onProvision, onLink, onToggleStatus, onDelete, onViewD
         ) : (
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <XCircle size={14} className="text-slate-400" />
-              <span className="text-xs sm:text-sm text-slate-500">No mailbox</span>
+              <XCircle size={16} className="text-slate-400" />
+              <span className="text-sm text-slate-500">No mailbox</span>
             </div>
             <div className="flex items-center gap-1">
               {domains.length > 0 && (
@@ -445,64 +445,61 @@ const UsersPage = () => {
       )}
 
       {/* Modern Header with Gradient */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="p-2 sm:p-3 bg-orange-500/20 rounded-lg sm:rounded-xl">
-                <Users className="w-6 h-6 sm:w-8 sm:h-8 text-orange-400" />
-              </div>
-              <div>
-                <h1 className="text-lg sm:text-2xl font-bold text-white">Team Members</h1>
-                <p className="text-slate-400 text-xs sm:text-base mt-0.5 sm:mt-1 hidden sm:block">Manage your team and their email accounts</p>
-              </div>
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-6 shadow-xl">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-orange-500/20 rounded-xl">
+              <Users className="w-8 h-8 text-orange-400" />
             </div>
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={fetchData}
-                className="p-2 sm:p-2.5 bg-white/10 backdrop-blur-sm text-white rounded-lg sm:rounded-xl hover:bg-white/20 transition-all border border-white/10"
-              >
-                <RefreshCw size={18} />
-              </button>
-              <button 
-                onClick={() => setShowAddModal(true)}
-                className="flex items-center gap-1 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg sm:rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg shadow-orange-500/25 text-sm sm:text-base"
-              >
-                <Plus size={18} />
-                <span className="hidden sm:inline">Add Member</span>
-              </button>
+            <div>
+              <h1 className="text-2xl font-bold text-white">Team Members</h1>
+              <p className="text-slate-400 mt-1">Manage your team and their email accounts</p>
             </div>
           </div>
-          
-          {/* Bulk provision button - shown separately on mobile */}
-          {usersWithoutMailbox.length > 0 && domains.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3">
+            {usersWithoutMailbox.length > 0 && domains.length > 0 && (
+              <button 
+                onClick={() => { setSelectedUsers(usersWithoutMailbox.map(u => u.id)); setShowBulkModal(true); }}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white/10 backdrop-blur-sm text-white rounded-xl hover:bg-white/20 transition-all border border-white/10"
+              >
+                <MailPlus size={18} />
+                <span className="hidden sm:inline">Provision All</span>
+                <span className="bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full">{usersWithoutMailbox.length}</span>
+              </button>
+            )}
             <button 
-              onClick={() => { setSelectedUsers(usersWithoutMailbox.map(u => u.id)); setShowBulkModal(true); }}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 backdrop-blur-sm text-white rounded-xl hover:bg-white/20 transition-all border border-white/10 w-full sm:hidden"
+              onClick={fetchData}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white/10 backdrop-blur-sm text-white rounded-xl hover:bg-white/20 transition-all border border-white/10"
             >
-              <MailPlus size={18} />
-              <span>Provision All</span>
-              <span className="bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full">{usersWithoutMailbox.length}</span>
+              <RefreshCw size={18} />
             </button>
-          )}
+            <button 
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg shadow-orange-500/25"
+            >
+              <Plus size={20} />
+              Add Member
+            </button>
+          </div>
+        </div>
 
-          {/* Search and Filters */}
-          <div className="mt-4 sm:mt-6 space-y-3">
-          <div className="relative">
-            <Search size={18} className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+        {/* Search and Filters */}
+        <div className="mt-6 flex flex-col md:flex-row items-stretch md:items-center gap-3">
+          <div className="flex-1 relative">
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search by name, email..."
+              placeholder="Search by name, email or mailbox..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 sm:pl-11 pr-4 py-2.5 sm:py-3 bg-white/10 border border-white/10 rounded-lg sm:rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-transparent text-sm sm:text-base"
+              className="w-full pl-11 pr-4 py-3 bg-white/10 border border-white/10 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-transparent"
             />
           </div>
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          <div className="flex items-center gap-3">
             <select
               value={filterRole}
               onChange={(e) => setFilterRole(e.target.value)}
-              className="px-3 sm:px-4 py-2 sm:py-3 bg-white/10 border border-white/10 rounded-lg sm:rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 text-sm min-w-[100px]"
+              className="px-4 py-3 bg-white/10 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50"
             >
               <option value="all" className="bg-slate-800">All Roles</option>
               <option value="ADMIN" className="bg-slate-800">Admins</option>
@@ -512,7 +509,7 @@ const UsersPage = () => {
             <select
               value={filterMailbox}
               onChange={(e) => setFilterMailbox(e.target.value)}
-              className="px-3 sm:px-4 py-2 sm:py-3 bg-white/10 border border-white/10 rounded-lg sm:rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 text-sm min-w-[120px]"
+              className="px-4 py-3 bg-white/10 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50"
             >
               <option value="all" className="bg-slate-800">All Mailboxes</option>
               <option value="with" className="bg-slate-800">With Mailbox</option>
@@ -521,39 +518,36 @@ const UsersPage = () => {
             <ViewModeToggle viewMode={viewMode} setViewMode={setViewMode} />
           </div>
         </div>
-        </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-5 hover:shadow-lg hover:border-slate-300 transition-all group">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg hover:border-slate-300 transition-all group">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xl sm:text-3xl font-bold text-slate-900">{stats?.total || 0}</p>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 sm:mt-1">Total Members</p>
+              <p className="text-3xl font-bold text-slate-900">{stats?.total || 0}</p>
+              <p className="text-sm text-slate-500 mt-1">Total Members</p>
             </div>
-            <div className="p-2 sm:p-3 bg-gradient-to-br from-blue-100 to-blue-50 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform">
-              <Users size={20} className="text-blue-600 sm:hidden" />
-              <Users size={24} className="text-blue-600 hidden sm:block" />
+            <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-50 rounded-xl group-hover:scale-110 transition-transform">
+              <Users size={24} className="text-blue-600" />
             </div>
           </div>
-          <div className="mt-2 sm:mt-3 h-1 sm:h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
             <div className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full" style={{ width: '100%' }} />
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-5 hover:shadow-lg hover:border-slate-300 transition-all group">
+        <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg hover:border-slate-300 transition-all group">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xl sm:text-3xl font-bold text-slate-900">{stats?.active || 0}</p>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 sm:mt-1">Active Users</p>
+              <p className="text-3xl font-bold text-slate-900">{stats?.active || 0}</p>
+              <p className="text-sm text-slate-500 mt-1">Active Users</p>
             </div>
-            <div className="p-2 sm:p-3 bg-gradient-to-br from-green-100 to-green-50 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform">
-              <UserCheck size={20} className="text-green-600 sm:hidden" />
-              <UserCheck size={24} className="text-green-600 hidden sm:block" />
+            <div className="p-3 bg-gradient-to-br from-green-100 to-green-50 rounded-xl group-hover:scale-110 transition-transform">
+              <UserCheck size={24} className="text-green-600" />
             </div>
           </div>
-          <div className="mt-2 sm:mt-3 h-1 sm:h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
             <div 
               className="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full transition-all" 
               style={{ width: `${stats?.total ? (stats.active / stats.total * 100) : 0}%` }} 
@@ -561,18 +555,17 @@ const UsersPage = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-5 hover:shadow-lg hover:border-slate-300 transition-all group">
+        <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg hover:border-slate-300 transition-all group">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xl sm:text-3xl font-bold text-slate-900">{stats?.admins || 0}</p>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 sm:mt-1">Administrators</p>
+              <p className="text-3xl font-bold text-slate-900">{stats?.admins || 0}</p>
+              <p className="text-sm text-slate-500 mt-1">Administrators</p>
             </div>
-            <div className="p-2 sm:p-3 bg-gradient-to-br from-purple-100 to-purple-50 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform">
-              <Shield size={20} className="text-purple-600 sm:hidden" />
-              <Shield size={24} className="text-purple-600 hidden sm:block" />
+            <div className="p-3 bg-gradient-to-br from-purple-100 to-purple-50 rounded-xl group-hover:scale-110 transition-transform">
+              <Shield size={24} className="text-purple-600" />
             </div>
           </div>
-          <div className="mt-2 sm:mt-3 h-1 sm:h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
             <div 
               className="h-full bg-gradient-to-r from-purple-400 to-purple-600 rounded-full transition-all" 
               style={{ width: `${stats?.total ? (stats.admins / stats.total * 100) : 0}%` }} 
@@ -580,18 +573,17 @@ const UsersPage = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-5 hover:shadow-lg hover:border-slate-300 transition-all group cursor-pointer" onClick={() => setFilterMailbox(filterMailbox === 'with' ? 'all' : 'with')}>
+        <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg hover:border-slate-300 transition-all group cursor-pointer" onClick={() => setFilterMailbox(filterMailbox === 'with' ? 'all' : 'with')}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xl sm:text-3xl font-bold text-slate-900">{stats?.withMailbox || 0}</p>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 sm:mt-1">With Mailbox</p>
+              <p className="text-3xl font-bold text-slate-900">{stats?.withMailbox || 0}</p>
+              <p className="text-sm text-slate-500 mt-1">With Mailbox</p>
             </div>
-            <div className="p-2 sm:p-3 bg-gradient-to-br from-orange-100 to-orange-50 rounded-lg sm:rounded-xl group-hover:scale-110 transition-transform">
-              <Mail size={20} className="text-orange-600 sm:hidden" />
-              <Mail size={24} className="text-orange-600 hidden sm:block" />
+            <div className="p-3 bg-gradient-to-br from-orange-100 to-orange-50 rounded-xl group-hover:scale-110 transition-transform">
+              <Mail size={24} className="text-orange-600" />
             </div>
           </div>
-          <div className="mt-2 sm:mt-3 h-1 sm:h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
             <div 
               className="h-full bg-gradient-to-r from-orange-400 to-orange-600 rounded-full transition-all" 
               style={{ width: `${stats?.total ? (stats.withMailbox / stats.total * 100) : 0}%` }} 
@@ -602,7 +594,7 @@ const UsersPage = () => {
 
       {/* Grid View */}
       {viewMode === 'grid' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredUsers.map((user) => (
             <UserCard
               key={user.id}

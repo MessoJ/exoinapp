@@ -6,22 +6,13 @@ import * as dns from 'dns/promises';
 const prisma = new PrismaClient();
 
 // DNS Record Type enum matching Prisma schema
-type DNSRecordType = 'MX' | 'TXT' | 'CNAME' | 'A' | 'AAAA' | 'SRV';
-
-// ==================== GMAIL COMPATIBILITY NOTES ====================
-// For Gmail to accept emails from your domain, you MUST have:
-// 1. Valid PTR record (reverse DNS) - server IP must resolve to mail hostname
-// 2. SPF record with explicit IP (-all recommended for best deliverability)
-// 3. DKIM with 2048-bit RSA key (minimum, we use 2048)
-// 4. DMARC with at least p=quarantine (p=reject preferred for reputation)
-// 5. Valid SSL/TLS certificates on SMTP port 25/587
-// 6. Server IP not on any blacklist (Spamhaus, Barracuda, etc.)
+type DNSRecordType = 'MX' | 'TXT' | 'CNAME' | 'A' | 'AAAA';
 
 // ==================== DKIM KEY GENERATION ====================
 
 function generateDKIMKeys(): { publicKey: string; privateKey: string } {
   const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
-    modulusLength: 2048, // Gmail requires minimum 1024, 2048 recommended
+    modulusLength: 2048,
     publicKeyEncoding: {
       type: 'spki',
       format: 'pem'
@@ -43,78 +34,6 @@ function generateDKIMKeys(): { publicKey: string; privateKey: string } {
 
 function generateVerificationCode(): string {
   return `exoin-verify-${crypto.randomBytes(16).toString('hex')}`;
-}
-
-// ==================== PTR (REVERSE DNS) CHECK ====================
-// Critical for Gmail - your server IP must resolve back to your mail hostname
-
-export async function checkPTRRecord(serverIP: string, expectedHostname: string): Promise<{
-  valid: boolean;
-  found: string | null;
-  message: string;
-}> {
-  try {
-    const hostnames = await dns.reverse(serverIP);
-    const found = hostnames[0] || null;
-    const valid = hostnames.some(h => 
-      h.toLowerCase() === expectedHostname.toLowerCase() ||
-      h.toLowerCase() === `${expectedHostname}.`.toLowerCase()
-    );
-    
-    return {
-      valid,
-      found,
-      message: valid 
-        ? 'PTR record correctly configured' 
-        : `PTR mismatch: expected ${expectedHostname}, found ${found || 'none'}. Contact your hosting provider to set reverse DNS.`
-    };
-  } catch (error: any) {
-    return {
-      valid: false,
-      found: null,
-      message: `PTR lookup failed: ${error.code || error.message}. Ensure your server has a PTR record set by your hosting provider.`
-    };
-  }
-}
-
-// ==================== BLACKLIST CHECK ====================
-// Check if server IP is on common email blacklists
-
-const BLACKLIST_SERVERS = [
-  'zen.spamhaus.org',
-  'bl.spamcop.net',
-  'b.barracudacentral.org',
-  'dnsbl.sorbs.net',
-  'spam.dnsbl.sorbs.net',
-];
-
-export async function checkBlacklists(serverIP: string): Promise<{
-  clean: boolean;
-  listed: string[];
-  message: string;
-}> {
-  const listed: string[] = [];
-  
-  // Reverse the IP for DNSBL lookup
-  const reversedIP = serverIP.split('.').reverse().join('.');
-  
-  for (const bl of BLACKLIST_SERVERS) {
-    try {
-      await dns.resolve4(`${reversedIP}.${bl}`);
-      // If resolves, the IP is listed
-      listed.push(bl);
-    } catch {
-      // Not listed (NXDOMAIN)
-    }
-  }
-  
-  return {
-    clean: listed.length === 0,
-    listed,
-    message: listed.length === 0 
-      ? 'Server IP is not on any checked blacklists'
-      : `Server IP is listed on: ${listed.join(', ')}. This will cause Gmail rejection.`
-  };
 }
 
 // ==================== DOMAIN MANAGEMENT ====================
@@ -164,105 +83,56 @@ async function generateDNSRecords(
   const serverHostname = process.env.MAIL_SERVER_HOSTNAME || `mail.${domain}`;
   const serverIP = process.env.MAIL_SERVER_IP || ''; // User needs to configure this
 
-  // DNS records matching Mailu configuration for Gmail deliverability
-  // Note: DKIM record should come from Mailu admin panel, not generated here
   const records: Array<{
     recordType: DNSRecordType;
     name: string;
     value: string;
     priority?: number;
     isRequired: boolean;
-    description?: string;
   }> = [
-    // MX Record - Priority 10 (matches Mailu)
+    // MX Record
     {
       recordType: 'MX',
       name: '@',
       value: serverHostname,
       priority: 10,
-      isRequired: true,
-      description: 'Routes incoming email to your Mailu server'
+      isRequired: true
     },
-    // SPF Record - Mailu uses ~all (soft fail), but -all is stricter for Gmail
-    // Using Mailu's format for compatibility
+    // SPF Record
     {
       recordType: 'TXT',
       name: '@',
       value: `v=spf1 mx a:${serverHostname} ~all`,
-      isRequired: true,
-      description: 'Authorizes your server to send email (SPF)'
+      isRequired: true
     },
-    // DKIM Record - This should be obtained from Mailu admin panel
-    // The key here is a placeholder - user must replace with Mailu's actual DKIM key
+    // DKIM Record
     {
       recordType: 'TXT',
       name: `${dkimSelector}._domainkey`,
-      value: dkimPublicKey ? `v=DKIM1; k=rsa; p=${dkimPublicKey}` : 'GET_FROM_MAILU_ADMIN_PANEL',
-      isRequired: true,
-      description: 'DKIM signature key - Get this from Mailu admin panel'
+      value: `v=DKIM1; k=rsa; p=${dkimPublicKey}`,
+      isRequired: true
     },
-    // DMARC Record - Start with p=none for monitoring, upgrade later
+    // DMARC Record
     {
       recordType: 'TXT',
       name: '_dmarc',
-      value: `v=DMARC1; p=quarantine; sp=quarantine; pct=100; rua=mailto:dmarc-reports@${domain}`,
-      isRequired: true,
-      description: 'DMARC policy for handling failed authentication'
+      value: `v=DMARC1; p=none; rua=mailto:dmarc@${domain}; ruf=mailto:dmarc@${domain}; fo=1`,
+      isRequired: true
     },
-    // Domain Verification for our platform
+    // Domain Verification
     {
       recordType: 'TXT',
       name: '@',
       value: verificationCode,
-      isRequired: true,
-      description: 'Verifies domain ownership in Exoin platform'
+      isRequired: true
     },
     // Mail server A record (if IP is provided)
     ...(serverIP ? [{
       recordType: 'A' as DNSRecordType,
       name: 'mail',
       value: serverIP,
-      isRequired: true,
-      description: 'Points mail subdomain to your server IP'
-    }] : []),
-    // Autoconfig for Mozilla Thunderbird (matches Mailu)
-    {
-      recordType: 'CNAME',
-      name: 'autoconfig',
-      value: serverHostname,
-      isRequired: false,
-      description: 'Auto-configuration for Mozilla Thunderbird'
-    },
-    // Autodiscover for Microsoft Outlook (matches Mailu)
-    {
-      recordType: 'CNAME',
-      name: 'autodiscover',
-      value: serverHostname,
-      isRequired: false,
-      description: 'Auto-configuration for Microsoft Outlook'
-    },
-    // SRV records for email client auto-discovery (matches Mailu)
-    {
-      recordType: 'SRV',
-      name: '_imaps._tcp',
-      value: '10 1 993 ' + serverHostname,
-      isRequired: false,
-      description: 'IMAP over SSL service discovery'
-    },
-    {
-      recordType: 'SRV',
-      name: '_submissions._tcp',
-      value: '10 1 465 ' + serverHostname,
-      isRequired: false,
-      description: 'SMTP submission over SSL service discovery'
-    },
-    {
-      recordType: 'SRV',
-      name: '_autodiscover._tcp',
-      value: '10 1 443 ' + serverHostname,
-      isRequired: false,
-      description: 'Autodiscover service for Outlook'
-    }
+      isRequired: true
+    }] : [])
   ];
 
   await prisma.domainDNS.createMany({
@@ -272,8 +142,7 @@ async function generateDNSRecords(
       name: r.name,
       value: r.value,
       priority: r.priority,
-      isRequired: r.isRequired,
-      description: r.description
+      isRequired: r.isRequired
     }))
   });
 }
@@ -310,69 +179,6 @@ export async function getDomainById(domainId: string): Promise<any> {
 }
 
 export async function getDomainDNSRecords(domainId: string): Promise<any[]> {
-  return prisma.domainDNS.findMany({
-    where: { domainId },
-    orderBy: [{ recordType: 'asc' }, { name: 'asc' }]
-  });
-}
-
-// Regenerate DNS records for an existing domain
-export async function regenerateDNSRecords(domainId: string): Promise<any[]> {
-  const domain = await prisma.emailDomain.findUnique({
-    where: { id: domainId }
-  });
-
-  if (!domain) {
-    throw new Error('Domain not found');
-  }
-
-  // Delete existing DNS records
-  await prisma.domainDNS.deleteMany({
-    where: { domainId }
-  });
-
-  // Generate verification code if not present
-  const verificationCode = domain.verificationCode || `exoin-verify-${crypto.randomBytes(8).toString('hex')}`;
-
-  // Generate new DKIM keys if not present
-  let dkimPublicKey = domain.dkimPublicKey;
-  let dkimPrivateKey = domain.dkimPrivateKey;
-  let dkimSelector = domain.dkimSelector || 'mail';
-
-  if (!dkimPublicKey || !dkimPrivateKey) {
-    const keyPair = crypto.generateKeyPairSync('rsa', {
-      modulusLength: 2048,
-      publicKeyEncoding: { type: 'spki', format: 'pem' },
-      privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
-    });
-    dkimPrivateKey = keyPair.privateKey;
-    dkimPublicKey = keyPair.publicKey
-      .replace('-----BEGIN PUBLIC KEY-----', '')
-      .replace('-----END PUBLIC KEY-----', '')
-      .replace(/\n/g, '');
-  }
-
-  // Update domain with keys and verification code
-  await prisma.emailDomain.update({
-    where: { id: domainId },
-    data: {
-      dkimPublicKey,
-      dkimPrivateKey,
-      dkimSelector,
-      verificationCode
-    }
-  });
-
-  // Generate new DNS records
-  await generateDNSRecords(
-    domainId,
-    domain.domain,
-    verificationCode,
-    dkimSelector,
-    dkimPublicKey
-  );
-
-  // Return the new records
   return prisma.domainDNS.findMany({
     where: { domainId },
     orderBy: [{ recordType: 'asc' }, { name: 'asc' }]
@@ -479,36 +285,11 @@ export async function verifyDNSRecords(domainId: string): Promise<{
 
         case 'CNAME':
           const cnameRecords = await dns.resolveCname(hostname);
-          if (cnameRecords.some(r => 
-            r.toLowerCase() === record.value.toLowerCase() ||
-            r.toLowerCase() === `${record.value}.`.toLowerCase()
-          )) {
+          if (cnameRecords.some(r => r.toLowerCase() === record.value.toLowerCase())) {
             found = record.value;
             verified = true;
           } else if (cnameRecords.length > 0) {
             found = cnameRecords.join(', ');
-          }
-          break;
-
-        case 'SRV':
-          try {
-            const srvRecords = await dns.resolveSrv(hostname);
-            // SRV record value format: "priority weight port target"
-            const [priority, weight, port, target] = record.value.split(' ');
-            const srvMatch = srvRecords.find(srv => 
-              srv.port === parseInt(port) && 
-              (srv.name.toLowerCase() === target.toLowerCase() ||
-               srv.name.toLowerCase() === `${target}.`.toLowerCase())
-            );
-            if (srvMatch) {
-              found = `${srvMatch.priority} ${srvMatch.weight} ${srvMatch.port} ${srvMatch.name}`;
-              verified = true;
-            } else if (srvRecords.length > 0) {
-              found = srvRecords.map(s => `${s.priority} ${s.weight} ${s.port} ${s.name}`).join(', ');
-            }
-          } catch (srvError: any) {
-            // SRV records might not exist, which is fine for optional records
-            found = `Not configured`;
           }
           break;
       }
@@ -844,243 +625,11 @@ export async function deleteEmailDomain(domainId: string): Promise<void> {
   });
 }
 
-// ==================== GMAIL DELIVERABILITY CHECK ====================
-// Comprehensive check to ensure emails will be accepted by Gmail
-
-export interface GmailDeliverabilityResult {
-  score: number; // 0-100
-  status: 'excellent' | 'good' | 'fair' | 'poor';
-  checks: {
-    name: string;
-    passed: boolean;
-    critical: boolean;
-    message: string;
-    howToFix?: string;
-  }[];
-  recommendations: string[];
-}
-
-export async function checkGmailDeliverability(domainId: string): Promise<GmailDeliverabilityResult> {
-  const domain = await prisma.emailDomain.findUnique({
-    where: { id: domainId },
-    include: { dnsRecords: true }
-  });
-
-  if (!domain) {
-    throw new Error('Domain not found');
-  }
-
-  const checks: GmailDeliverabilityResult['checks'] = [];
-  const recommendations: string[] = [];
-  const serverIP = process.env.MAIL_SERVER_IP;
-  const serverHostname = process.env.MAIL_SERVER_HOSTNAME || `mail.${domain.domain}`;
-
-  // 1. MX Record Check
-  checks.push({
-    name: 'MX Record',
-    passed: domain.mxVerified,
-    critical: true,
-    message: domain.mxVerified 
-      ? 'MX record is properly configured'
-      : 'MX record is missing or incorrect',
-    howToFix: domain.mxVerified ? undefined : `Add MX record: ${domain.domain} → ${serverHostname} (priority 10)`
-  });
-
-  // 2. SPF Record Check
-  const spfRecord = domain.dnsRecords.find(r => r.value.startsWith('v=spf1'));
-  const spfStrict = spfRecord?.value.includes('-all');
-  checks.push({
-    name: 'SPF Record',
-    passed: domain.spfVerified,
-    critical: true,
-    message: domain.spfVerified 
-      ? (spfStrict ? 'SPF record with strict policy (-all)' : 'SPF record configured but using soft fail (~all)')
-      : 'SPF record is missing or incorrect',
-    howToFix: domain.spfVerified 
-      ? (spfStrict ? undefined : 'Change ~all to -all for stricter policy and better Gmail reputation')
-      : `Add TXT record: ${domain.domain} → v=spf1 mx a ip4:YOUR_IP -all`
-  });
-  if (domain.spfVerified && !spfStrict) {
-    recommendations.push('Upgrade SPF from ~all (soft fail) to -all (hard fail) for better deliverability');
-  }
-
-  // 3. DKIM Record Check
-  const dkimSelector = domain.dkimSelector || 'mail';
-  checks.push({
-    name: 'DKIM Record',
-    passed: domain.dkimVerified,
-    critical: true,
-    message: domain.dkimVerified 
-      ? 'DKIM is properly configured with 2048-bit key'
-      : 'DKIM record is missing or incorrect',
-    howToFix: domain.dkimVerified ? undefined : `Add TXT record: ${dkimSelector}._domainkey.${domain.domain} → v=DKIM1; k=rsa; p=YOUR_PUBLIC_KEY`
-  });
-
-  // 4. DMARC Record Check
-  const dmarcRecord = domain.dnsRecords.find(r => r.value.startsWith('v=DMARC1'));
-  const dmarcPolicy = dmarcRecord?.value.match(/p=(none|quarantine|reject)/)?.[1] || 'none';
-  const dmarcStrict = dmarcPolicy === 'reject' || dmarcPolicy === 'quarantine';
-  checks.push({
-    name: 'DMARC Record',
-    passed: domain.dmarcVerified,
-    critical: true,
-    message: domain.dmarcVerified 
-      ? `DMARC configured with p=${dmarcPolicy} policy`
-      : 'DMARC record is missing or incorrect',
-    howToFix: domain.dmarcVerified 
-      ? (dmarcStrict ? undefined : 'Upgrade DMARC policy from p=none to p=quarantine or p=reject')
-      : `Add TXT record: _dmarc.${domain.domain} → v=DMARC1; p=quarantine; rua=mailto:dmarc@${domain.domain}`
-  });
-  if (domain.dmarcVerified && dmarcPolicy === 'none') {
-    recommendations.push('Upgrade DMARC policy from p=none to p=quarantine for better spam protection');
-  }
-
-  // 5. PTR Record Check (Reverse DNS)
-  let ptrPassed = false;
-  let ptrMessage = 'PTR record check skipped (no server IP configured)';
-  if (serverIP) {
-    const ptrResult = await checkPTRRecord(serverIP, serverHostname);
-    ptrPassed = ptrResult.valid;
-    ptrMessage = ptrResult.message;
-  }
-  checks.push({
-    name: 'PTR Record (Reverse DNS)',
-    passed: ptrPassed,
-    critical: true,
-    message: ptrMessage,
-    howToFix: ptrPassed ? undefined : 'Contact your hosting provider to set PTR record for your server IP to resolve to your mail hostname'
-  });
-
-  // 6. Blacklist Check
-  let blacklistPassed = true;
-  let blacklistMessage = 'Blacklist check skipped (no server IP configured)';
-  if (serverIP) {
-    const blResult = await checkBlacklists(serverIP);
-    blacklistPassed = blResult.clean;
-    blacklistMessage = blResult.message;
-    if (!blResult.clean) {
-      recommendations.push(`Your IP is listed on: ${blResult.listed.join(', ')}. Request delisting from each service.`);
-    }
-  }
-  checks.push({
-    name: 'IP Blacklist Check',
-    passed: blacklistPassed,
-    critical: true,
-    message: blacklistMessage,
-    howToFix: blacklistPassed ? undefined : 'Visit each blacklist website to request removal of your IP address'
-  });
-
-  // 7. A Record for mail subdomain
-  let aRecordPassed = false;
-  try {
-    const aRecords = await dns.resolve4(`mail.${domain.domain}`);
-    aRecordPassed = aRecords.length > 0;
-    if (serverIP && !aRecords.includes(serverIP)) {
-      aRecordPassed = false;
-    }
-  } catch {
-    aRecordPassed = false;
-  }
-  checks.push({
-    name: 'Mail Server A Record',
-    passed: aRecordPassed,
-    critical: false,
-    message: aRecordPassed 
-      ? 'mail.domain.com A record is configured'
-      : 'mail.domain.com A record is missing',
-    howToFix: aRecordPassed ? undefined : `Add A record: mail.${domain.domain} → YOUR_SERVER_IP`
-  });
-
-  // 8. Check domain verification
-  checks.push({
-    name: 'Domain Ownership Verified',
-    passed: domain.isVerified,
-    critical: false,
-    message: domain.isVerified 
-      ? 'Domain ownership is verified'
-      : 'Domain ownership not yet verified',
-    howToFix: domain.isVerified ? undefined : `Add TXT record with value: ${domain.verificationCode}`
-  });
-
-  // Calculate score
-  const criticalChecks = checks.filter(c => c.critical);
-  const nonCriticalChecks = checks.filter(c => !c.critical);
-  
-  const criticalScore = (criticalChecks.filter(c => c.passed).length / criticalChecks.length) * 70;
-  const nonCriticalScore = (nonCriticalChecks.filter(c => c.passed).length / nonCriticalChecks.length) * 30;
-  const score = Math.round(criticalScore + nonCriticalScore);
-
-  let status: GmailDeliverabilityResult['status'];
-  if (score >= 90) status = 'excellent';
-  else if (score >= 70) status = 'good';
-  else if (score >= 50) status = 'fair';
-  else status = 'poor';
-
-  // Add general recommendations
-  if (score < 100) {
-    if (!checks.find(c => c.name === 'PTR Record (Reverse DNS)')?.passed) {
-      recommendations.unshift('⚠️ CRITICAL: PTR record is essential for Gmail. Without it, emails may be rejected.');
-    }
-    if (!checks.find(c => c.name === 'DKIM Record')?.passed) {
-      recommendations.unshift('⚠️ CRITICAL: DKIM signing is required by Gmail for trusted delivery.');
-    }
-  }
-
-  if (score === 100) {
-    recommendations.push('✅ All checks passed! Your domain is well-configured for Gmail delivery.');
-  }
-
-  return {
-    score,
-    status,
-    checks,
-    recommendations
-  };
-}
-
-// ==================== UPGRADE DMARC POLICY ====================
-// Helper to upgrade DMARC policy for better deliverability
-
-export async function upgradeDmarcPolicy(
-  domainId: string, 
-  policy: 'none' | 'quarantine' | 'reject'
-): Promise<void> {
-  const domain = await prisma.emailDomain.findUnique({
-    where: { id: domainId }
-  });
-
-  if (!domain) {
-    throw new Error('Domain not found');
-  }
-
-  const dmarcValue = `v=DMARC1; p=${policy}; sp=${policy}; pct=100; adkim=s; aspf=s; rua=mailto:dmarc-reports@${domain.domain}; ruf=mailto:dmarc-forensic@${domain.domain}; fo=1`;
-
-  // Update the DMARC DNS record
-  await prisma.domainDNS.updateMany({
-    where: {
-      domainId,
-      name: '_dmarc'
-    },
-    data: {
-      value: dmarcValue
-    }
-  });
-
-  // Update domain DMARC policy
-  await prisma.emailDomain.update({
-    where: { id: domainId },
-    data: {
-      dmarcPolicy: policy
-    }
-  });
-}
-
 export default {
   createEmailDomain,
   getDomainsByCompany,
   getDomainById,
   getDomainDNSRecords,
-  regenerateDNSRecords,
   verifyDNSRecords,
   createMailbox,
   getMailboxesByDomain,
@@ -1094,10 +643,5 @@ export default {
   deleteEmailAlias,
   getDomainStats,
   getEmailLogs,
-  deleteEmailDomain,
-  // Gmail deliverability
-  checkGmailDeliverability,
-  checkPTRRecord,
-  checkBlacklists,
-  upgradeDmarcPolicy
+  deleteEmailDomain
 };

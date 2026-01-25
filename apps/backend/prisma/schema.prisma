@@ -494,13 +494,12 @@ model EmailAlias {
 }
 
 model DomainDNS {
-  id          String        @id @default(uuid())
-  recordType  DNSRecordType
-  name        String // e.g., "@", "mail", "_dmarc"
-  value       String // Record value
-  priority    Int? // For MX records
-  ttl         Int           @default(3600)
-  description String? // Human-readable description
+  id         String        @id @default(uuid())
+  recordType DNSRecordType
+  name       String // e.g., "@", "mail", "_dmarc"
+  value      String // Record value
+  priority   Int? // For MX records
+  ttl        Int           @default(3600)
 
   isRequired    Boolean   @default(true)
   isVerified    Boolean   @default(false)
@@ -521,7 +520,6 @@ enum DNSRecordType {
   CNAME
   A
   AAAA
-  SRV
 }
 
 model EmailLog {

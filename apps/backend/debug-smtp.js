@@ -1,26 +1,15 @@
 const nodemailer = require('nodemailer');
-require('dotenv').config();
 
 async function testSMTP() {
   console.log('=== SMTP Debug Test ===\n');
   
-  // Get credentials from environment variables
-  const smtpUser = process.env.SMTP_USER || process.env.DEBUG_SMTP_USER;
-  const smtpPass = process.env.SMTP_PASS || process.env.DEBUG_SMTP_PASS;
-  
-  if (!smtpUser || !smtpPass) {
-    console.log('Error: SMTP credentials not configured.');
-    console.log('Please set SMTP_USER and SMTP_PASS environment variables.');
-    process.exit(1);
-  }
-  
   const config = {
-    host: process.env.SMTP_HOST || 'mail.exoinafrica.com',
-    port: parseInt(process.env.SMTP_PORT) || 465,
+    host: 'mail.exoinafrica.com',
+    port: 465,
     secure: true,
     auth: {
-      user: smtpUser,
-      pass: smtpPass
+      user: 'admin@exoinafrica.com',
+      pass: 'Admin@2030'
     },
     debug: true,
     logger: true

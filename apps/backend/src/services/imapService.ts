@@ -63,14 +63,14 @@ class ImapService {
   }
 
   private initConfig(): void {
-    const host = process.env.IMAP_HOST || process.env.SMTP_HOST;
+    const host = process.env.IMAP_HOST;
     const port = parseInt(process.env.IMAP_PORT || '993', 10);
     const secure = process.env.IMAP_SECURE !== 'false';
-    const user = process.env.IMAP_USER || process.env.SMTP_USER;
-    const pass = process.env.IMAP_PASS || process.env.SMTP_PASS;
+    const user = process.env.IMAP_USER;
+    const pass = process.env.IMAP_PASS;
 
     if (!host || !user || !pass) {
-      console.warn('⚠️  IMAP not configured. Email sync will be disabled.');
+      console.warn('⚠️  IMAP not configured (set IMAP_HOST/IMAP_USER/IMAP_PASS). Email sync will be disabled.');
       this.isConfigured = false;
       return;
     }
@@ -98,7 +98,7 @@ class ImapService {
       : this.config!.auth;
 
     return new ImapFlow({
-      host: this.config?.host || process.env.SMTP_HOST || 'mail.exoinafrica.com',
+      host: this.config?.host || process.env.IMAP_HOST || 'mail.exoinafrica.com',
       port: this.config?.port || 993,
       secure: this.config?.secure ?? true,
       auth,

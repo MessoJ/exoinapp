@@ -36,13 +36,17 @@ const DocumentPreview = ({ type, data, signature, showTotals, page, totalPages, 
       city: data.clientCity || '', 
       contact: data.clientEmail
     },
+    scope: data.scope || '',
+    taxable: data.taxable !== false,
+    taxRate: data.taxRate || 16,
     items: (data.items || []).map(item => ({
+      name: item.name || '',
       desc: item.description,
       title: item.description, // For quotation
       qty: item.quantity,
       rate: item.unitPrice,
       total: item.total,
-      unit: 'Unit' // Default unit
+      unit: item.unit || 'Unit'
     })),
     subtotal: data.subtotal,
     tax: data.taxAmount,
@@ -229,6 +233,8 @@ const FinanceDocsPage = () => {
       dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       validUntil: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       taxRate: 16,
+      taxable: true, // VAT/Tax toggle
+      scope: '', // Scope of work for quotations
       companyName: 'Exoin Africa Ltd.',
       companyAddress: 'Nairobi HQ • Westlands Tower',
       companyTaxId: 'VAT: P051...Z',
@@ -236,13 +242,14 @@ const FinanceDocsPage = () => {
       bankAccount: '0000-0000-0000',
       notes: '',
       terms: '',
-      items: [{ description: '', quantity: 1, unitPrice: 0, notes: '' }]
+      items: [{ name: '', description: '', quantity: 1, unitPrice: 0, unit: 'Unit', notes: '' }]
     }
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: 'items' });
   const watchItems = watch('items');
   const watchTaxRate = watch('taxRate');
+  const watchTaxable = watch('taxable');
 
   // Calculate totals
   const calculateTotals = useCallback(() => {
@@ -252,10 +259,10 @@ const FinanceDocsPage = () => {
       const price = parseFloat(item.unitPrice) || 0;
       return sum + (qty * price);
     }, 0);
-    const taxAmount = subtotal * ((watchTaxRate || 16) / 100);
+    const taxAmount = watchTaxable !== false ? subtotal * ((watchTaxRate || 16) / 100) : 0;
     const total = subtotal + taxAmount;
     return { subtotal, taxAmount, total };
-  }, [watchItems, watchTaxRate]);
+  }, [watchItems, watchTaxRate, watchTaxable]);
 
   const totals = calculateTotals();
 
@@ -669,15 +676,39 @@ const FinanceDocsPage = () => {
                     </div>
                     <div className="col-span-2 md:col-span-1">
                       <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">Tax Rate (%)</label>
-                      <input 
-                        {...register('taxRate')}
-                        type="number"
-                        min="0"
-                        max="100"
-                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                      />
+                      <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input 
+                            {...register('taxable')}
+                            type="checkbox"
+                            className="w-4 h-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500"
+                          />
+                          <span className="text-xs text-slate-600">Apply Tax</span>
+                        </label>
+                        <input 
+                          {...register('taxRate')}
+                          type="number"
+                          min="0"
+                          max="100"
+                          disabled={!watchTaxable}
+                          className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:bg-slate-100 disabled:text-slate-400"
+                        />
+                      </div>
                     </div>
                   </div>
+
+                  {/* Scope of Work - Quotation Only */}
+                  {!isInvoice && (
+                    <div className="mt-4 pt-4 border-t border-slate-100">
+                      <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">Scope of Work</label>
+                      <textarea 
+                        {...register('scope')}
+                        rows={3}
+                        placeholder="Describe the scope of work or services to be provided..."
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Line Items */}
@@ -690,7 +721,8 @@ const FinanceDocsPage = () => {
                   <div className="space-y-3 sm:space-y-4">
                     {/* Desktop Header - Hidden on mobile */}
                     <div className="hidden sm:grid grid-cols-12 gap-4 text-xs font-bold text-slate-500 uppercase tracking-wider px-4">
-                      <div className="col-span-5">Description</div>
+                      <div className="col-span-2">Item</div>
+                      <div className="col-span-3">Description</div>
                       <div className="col-span-2 text-right">Qty</div>
                       <div className="col-span-2 text-right">Rate</div>
                       <div className="col-span-2 text-right">Total</div>
@@ -708,7 +740,12 @@ const FinanceDocsPage = () => {
                           {/* Mobile Layout */}
                           <div className="sm:hidden space-y-3">
                             <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1">
+                              <div className="flex-1 space-y-2">
+                                <input 
+                                  {...register(`items.${index}.name`)}
+                                  placeholder="Item name"
+                                  className="w-full px-3 py-2 text-sm font-medium border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                />
                                 <input 
                                   {...register(`items.${index}.description`)}
                                   placeholder="Item description"
@@ -761,7 +798,14 @@ const FinanceDocsPage = () => {
 
                           {/* Desktop Layout */}
                           <div className="hidden sm:grid grid-cols-12 gap-4 items-start">
-                            <div className="col-span-5">
+                            <div className="col-span-2">
+                              <input 
+                                {...register(`items.${index}.name`)}
+                                placeholder="Item name"
+                                className="w-full px-3 py-2 text-sm font-medium border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                              />
+                            </div>
+                            <div className="col-span-3">
                               <input 
                                 {...register(`items.${index}.description`)}
                                 placeholder="Item description"
@@ -812,7 +856,7 @@ const FinanceDocsPage = () => {
                     {/* Add Item */}
                     <button
                       type="button"
-                      onClick={() => append({ description: '', quantity: 1, unitPrice: 0, notes: '' })}
+                      onClick={() => append({ name: '', description: '', quantity: 1, unitPrice: 0, unit: 'Unit', notes: '' })}
                       className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-200 rounded-lg sm:rounded-xl text-slate-500 hover:border-orange-300 hover:text-orange-600 transition-colors text-sm sm:text-base"
                     >
                       <Plus size={18} />

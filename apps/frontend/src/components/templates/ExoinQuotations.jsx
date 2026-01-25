@@ -114,18 +114,24 @@ export const QuotationTemplate = ({
       address: "Waiyaki Way, HQ2",
       city: "Nairobi, Kenya"
     },
+    scope: "Exoin Africa proposes the following autonomous hygiene solution tailored to your facility's specifications. This quote includes equipment deployment, software integration, and ongoing maintenance.",
+    taxable: true, // Toggle for VAT/Tax
+    taxRate: 16, // Tax rate percentage
     items: [
       { 
+        name: "Scout S-1 Service",
         title: "Autonomous Floor Scrubbing (Lobby & Corridors)", 
         desc: "Deployment of Model S-1 'Scout' units for daily maintenance. Includes mapping and AI obstacle avoidance setup.",
         unit: "Month", qty: 12, rate: 85000, total: 1020000 
       },
       { 
+        name: "Decontamination Service",
         title: "Data Center Decontamination (Tier 3)", 
         desc: "ISO 14644-1 Class 8 particulate removal. Anti-static protocols. Bi-annual service.",
         unit: "Service", qty: 2, rate: 120000, total: 240000 
       },
       { 
+        name: "Supply Kit",
         title: "Tactical Supply Kit", 
         desc: "Power Scrub™ agents (200L) + consumables for on-site staff.",
         unit: "Quarterly", qty: 4, rate: 45000, total: 180000 
@@ -158,7 +164,7 @@ export const QuotationTemplate = ({
   };
 
   const addItem = () => {
-    onUpdate('items', [...displayData.items, { title: "", desc: "", unit: "Unit", qty: 1, rate: 0, total: 0 }]);
+    onUpdate('items', [...displayData.items, { name: "", title: "", desc: "", unit: "Unit", qty: 1, rate: 0, total: 0 }]);
   };
 
   const removeItem = (index) => {
@@ -275,9 +281,48 @@ export const QuotationTemplate = ({
             {showHeader && (
               <div className="mb-8">
                  <h3 className="text-sm font-bold text-[#0F172A] uppercase border-l-4 border-orange-500 pl-3 mb-2">Scope of Works</h3>
-                 <p className="text-xs text-slate-500 leading-relaxed">
-                    Exoin Africa proposes the following autonomous hygiene solution tailored to your facility's specifications. This quote includes equipment deployment, software integration, and ongoing maintenance.
-                 </p>
+                 {mode === 'edit' ? (
+                   <textarea 
+                     className="w-full text-xs text-slate-500 leading-relaxed bg-transparent border border-slate-200 rounded p-2 focus:outline-none focus:border-orange-500 resize-none"
+                     value={displayData.scope || ''}
+                     onChange={(e) => onUpdate('scope', e.target.value)}
+                     placeholder="Enter scope of work description..."
+                     rows={3}
+                   />
+                 ) : (
+                   <p className="text-xs text-slate-500 leading-relaxed">
+                      {displayData.scope || "Exoin Africa proposes the following autonomous hygiene solution tailored to your facility's specifications. This quote includes equipment deployment, software integration, and ongoing maintenance."}
+                   </p>
+                 )}
+              </div>
+            )}
+
+            {/* Tax Toggle - Edit Mode Only */}
+            {mode === 'edit' && showHeader && (
+              <div className="mb-4 flex items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox"
+                    checked={displayData.taxable !== false}
+                    onChange={(e) => onUpdate('taxable', e.target.checked)}
+                    className="w-4 h-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500"
+                  />
+                  <span className="text-xs text-slate-600 font-medium">Apply VAT/Tax</span>
+                </label>
+                {displayData.taxable !== false && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-slate-400">Rate:</span>
+                    <input 
+                      type="number"
+                      className="w-14 text-xs text-center bg-transparent border border-slate-200 rounded px-1 py-0.5 focus:outline-none focus:border-orange-500"
+                      value={displayData.taxRate || 16}
+                      onChange={(e) => onUpdate('taxRate', parseFloat(e.target.value) || 0)}
+                      min="0"
+                      max="100"
+                    />
+                    <span className="text-xs text-slate-400">%</span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -285,16 +330,29 @@ export const QuotationTemplate = ({
             <table className="w-full text-left text-xs mb-12 table-fixed">
                <thead className="bg-slate-50 text-slate-500">
                   <tr>
-                     <th className="py-3 pl-4 font-bold uppercase tracking-wider w-[50%]">Description {!showHeader && <span className="text-[10px] text-slate-400 font-normal">(continued)</span>}</th>
-                     <th className="py-3 text-right w-[20%]">Rate</th>
-                     <th className="py-3 text-center w-[10%]">Qty</th>
+                     <th className="py-3 pl-4 font-bold uppercase tracking-wider w-[15%]">Item {!showHeader && <span className="text-[10px] text-slate-400 font-normal">(cont.)</span>}</th>
+                     <th className="py-3 font-bold uppercase tracking-wider w-[35%]">Description</th>
+                     <th className="py-3 text-right w-[18%]">Rate</th>
+                     <th className="py-3 text-center w-[12%]">Qty</th>
                      <th className="py-3 pr-4 text-right w-[20%]">Total</th>
                   </tr>
                </thead>
                <tbody className="divide-y divide-slate-100">
                   {displayData.items.map((item, i) => (
                      <tr key={i} className="group">
-                        <td className="py-4 pl-4 pr-4 align-top">
+                        <td className="py-4 pl-4 align-top">
+                           {mode === 'edit' ? (
+                             <input 
+                               className="w-full font-bold text-slate-700 text-[10px] bg-transparent border-b border-transparent hover:border-slate-300 focus:outline-none focus:border-orange-500"
+                               value={item.name || ''}
+                               onChange={(e) => handleItemChange(i, 'name', e.target.value)}
+                               placeholder="Item Name"
+                             />
+                           ) : (
+                             <p className="font-bold text-slate-700 text-[10px]">{item.name}</p>
+                           )}
+                        </td>
+                        <td className="py-4 pr-4 align-top">
                            {mode === 'edit' ? (
                              <>
                                <input 
@@ -389,10 +447,12 @@ export const QuotationTemplate = ({
                          <span>Subtotal</span>
                          <span className="font-mono">{displayData.subtotal.toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between text-xs text-slate-500 mb-4">
-                         <span>Tax (16%)</span>
-                         <span className="font-mono">{displayData.tax.toLocaleString()}</span>
-                      </div>
+                      {displayData.taxable !== false && (
+                        <div className="flex justify-between text-xs text-slate-500 mb-4">
+                           <span>Tax ({displayData.taxRate || 16}%)</span>
+                           <span className="font-mono">{displayData.tax.toLocaleString()}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between items-end pt-4 border-t border-slate-200">
                          <span className="text-sm font-bold text-slate-900 uppercase tracking-widest">Total</span>
                          <div className="text-right">
