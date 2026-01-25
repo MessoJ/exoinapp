@@ -89,12 +89,13 @@ const ClientSelector = ({ clients = [], selectedClient, onSelect, onCreateNew })
       >
         {selectedClient ? (
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+            <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
               <Building className="text-orange-600" size={18} />
             </div>
-            <div>
-              <p className="font-medium text-slate-900">{selectedClient.name}</p>
-              <p className="text-xs text-slate-500">{selectedClient.email}</p>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium text-slate-900 truncate">{selectedClient.name}</p>
+              <p className="text-xs text-slate-500 truncate">{selectedClient.email || selectedClient.phone || 'No contact'}</p>
+              {selectedClient.address && <p className="text-xs text-slate-400 truncate">{selectedClient.address}</p>}
             </div>
           </div>
         ) : (
@@ -124,12 +125,13 @@ const ClientSelector = ({ clients = [], selectedClient, onSelect, onCreateNew })
                   onClick={() => { onSelect(client); setIsOpen(false); }}
                   className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left"
                 >
-                  <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
+                  <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <Building className="text-slate-500" size={14} />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-900">{client.name}</p>
-                    <p className="text-xs text-slate-500">{client.email}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-slate-900 truncate">{client.name}</p>
+                    <p className="text-xs text-slate-500 truncate">{client.email} {client.phone && `• ${client.phone}`}</p>
+                    {client.address && <p className="text-xs text-slate-400 truncate">{client.address}</p>}
                   </div>
                 </button>
               ))}
@@ -703,9 +705,9 @@ const FinanceDocsPage = () => {
                       <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">Scope of Work</label>
                       <textarea 
                         {...register('scope')}
-                        rows={3}
-                        placeholder="Describe the scope of work or services to be provided..."
-                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none"
+                        rows={5}
+                        placeholder="Describe the scope of work or services to be provided...\n\nFor example:\n• Project overview and objectives\n• Deliverables included\n• Timeline and milestones\n• Any exclusions or assumptions"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-y min-h-[120px]"
                       />
                     </div>
                   )}
@@ -806,15 +808,17 @@ const FinanceDocsPage = () => {
                               />
                             </div>
                             <div className="col-span-3">
-                              <input 
+                              <textarea 
                                 {...register(`items.${index}.description`)}
                                 placeholder="Item description"
-                                className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                rows={2}
+                                className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-y min-h-[42px]"
                               />
-                              <input 
+                              <textarea 
                                 {...register(`items.${index}.notes`)}
                                 placeholder="Additional notes (optional)"
-                                className="w-full px-3 py-2 mt-2 text-sm border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                rows={1}
+                                className="w-full px-3 py-2 mt-2 text-sm border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-y min-h-[38px]"
                               />
                             </div>
                             <div className="col-span-2">
@@ -873,18 +877,18 @@ const FinanceDocsPage = () => {
                       <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5">Notes</label>
                       <textarea
                         {...register('notes')}
-                        rows={2}
-                        placeholder="Add any notes or special instructions..."
-                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none"
+                        rows={4}
+                        placeholder="Add any notes or special instructions...&#10;&#10;You can include multiple lines of text here."
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-y min-h-[100px]"
                       />
                     </div>
                     <div>
                       <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5">Terms & Conditions</label>
                       <textarea
                         {...register('terms')}
-                        rows={2}
-                        placeholder="Payment terms, conditions, disclaimers..."
-                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none"
+                        rows={4}
+                        placeholder="Payment terms, conditions, disclaimers...&#10;&#10;Example:&#10;• Payment due within 14 days&#10;• 50% deposit required to commence work"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-y min-h-[100px]"
                       />
                     </div>
 

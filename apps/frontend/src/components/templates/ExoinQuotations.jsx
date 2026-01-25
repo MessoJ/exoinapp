@@ -278,25 +278,6 @@ export const QuotationTemplate = ({
 
          {/* Body */}
          <div className="p-12 flex-grow relative z-10">
-            {showHeader && (
-              <div className="mb-8">
-                 <h3 className="text-sm font-bold text-[#0F172A] uppercase border-l-4 border-orange-500 pl-3 mb-2">Scope of Works</h3>
-                 {mode === 'edit' ? (
-                   <textarea 
-                     className="w-full text-xs text-slate-500 leading-relaxed bg-transparent border border-slate-200 rounded p-2 focus:outline-none focus:border-orange-500 resize-none"
-                     value={displayData.scope || ''}
-                     onChange={(e) => onUpdate('scope', e.target.value)}
-                     placeholder="Enter scope of work description..."
-                     rows={3}
-                   />
-                 ) : (
-                   <p className="text-xs text-slate-500 leading-relaxed">
-                      {displayData.scope || "Exoin Africa proposes the following autonomous hygiene solution tailored to your facility's specifications. This quote includes equipment deployment, software integration, and ongoing maintenance."}
-                   </p>
-                 )}
-              </div>
-            )}
-
             {/* Tax Toggle - Edit Mode Only */}
             {mode === 'edit' && showHeader && (
               <div className="mb-4 flex items-center gap-3">
@@ -343,13 +324,13 @@ export const QuotationTemplate = ({
                         <td className="py-4 pl-4 align-top">
                            {mode === 'edit' ? (
                              <input 
-                               className="w-full font-bold text-slate-700 text-[10px] bg-transparent border-b border-transparent hover:border-slate-300 focus:outline-none focus:border-orange-500"
+                               className="w-full font-bold text-slate-900 text-xs bg-transparent border-b border-transparent hover:border-slate-300 focus:outline-none focus:border-orange-500"
                                value={item.name || ''}
                                onChange={(e) => handleItemChange(i, 'name', e.target.value)}
                                placeholder="Item Name"
                              />
                            ) : (
-                             <p className="font-bold text-slate-700 text-[10px]">{item.name}</p>
+                             <p className="font-bold text-slate-900 text-xs">{item.name}</p>
                            )}
                         </td>
                         <td className="py-4 pr-4 align-top">
@@ -423,25 +404,8 @@ export const QuotationTemplate = ({
             {/* Summary */}
             {showTotals && (
               <div className="flex flex-col">
-                 {/* Notes & Terms */}
-                 {(displayData.notes || displayData.terms) && (
-                   <div className="mb-6 p-4 bg-slate-50 border-l-2 border-orange-500">
-                     {displayData.notes && (
-                       <div className="mb-3">
-                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Notes</p>
-                         <p className="text-[10px] text-slate-600 leading-relaxed whitespace-pre-wrap">{displayData.notes}</p>
-                       </div>
-                     )}
-                     {displayData.terms && (
-                       <div>
-                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Terms & Conditions</p>
-                         <p className="text-[10px] text-slate-500 leading-relaxed whitespace-pre-wrap">{displayData.terms}</p>
-                       </div>
-                     )}
-                   </div>
-                 )}
-                 
-                 <div className="flex justify-end">
+                 {/* Totals Box */}
+                 <div className="flex justify-end mb-6">
                    <div className="w-1/2 p-6 bg-slate-50 border-t-2 border-[#0F172A]">
                       <div className="flex justify-between text-xs text-slate-500 mb-2">
                          <span>Subtotal</span>
@@ -460,15 +424,47 @@ export const QuotationTemplate = ({
                              <span className="text-2xl font-black text-orange-600">{displayData.total.toLocaleString()}</span>
                          </div>
                       </div>
-                      {signature && (
-                        <div className="mt-8 flex flex-col items-end">
-                          <img src={signature} alt="Signature" className="h-16 object-contain mb-2" />
-                          <div className="w-48 border-t border-slate-300"></div>
-                          <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">Authorized Signature</p>
-                        </div>
-                      )}
                    </div>
                  </div>
+
+                 {/* Scope of Work - After Totals */}
+                 {displayData.scope && (
+                   <div className="mb-6">
+                     <h3 className="text-sm font-bold text-[#0F172A] uppercase border-l-4 border-orange-500 pl-3 mb-2">Scope of Works</h3>
+                     <p className="text-xs text-slate-500 leading-relaxed whitespace-pre-wrap">
+                       {displayData.scope}
+                     </p>
+                   </div>
+                 )}
+
+                 {/* Notes & Terms */}
+                 {(displayData.notes || displayData.terms) && (
+                   <div className="mb-6 p-4 bg-slate-50 border-l-2 border-orange-500">
+                     {displayData.notes && (
+                       <div className="mb-3">
+                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Notes</p>
+                         <p className="text-[10px] text-slate-600 leading-relaxed whitespace-pre-wrap">{displayData.notes}</p>
+                       </div>
+                     )}
+                     {displayData.terms && (
+                       <div>
+                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Terms & Conditions</p>
+                         <p className="text-[10px] text-slate-500 leading-relaxed whitespace-pre-wrap">{displayData.terms}</p>
+                       </div>
+                     )}
+                   </div>
+                 )}
+                 
+                 {/* Signature */}
+                 {signature && (
+                   <div className="flex justify-end">
+                     <div className="flex flex-col items-end">
+                       <img src={signature} alt="Signature" className="h-16 object-contain mb-2" />
+                       <div className="w-48 border-t border-slate-300"></div>
+                       <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">Authorized Signature</p>
+                     </div>
+                   </div>
+                 )}
               </div>
             )}
          </div>
