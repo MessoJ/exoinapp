@@ -311,8 +311,8 @@ export const QuotationTemplate = ({
             <table className="w-full text-left text-xs mb-12 table-fixed">
                <thead className="bg-slate-50 text-slate-500">
                   <tr>
-                     <th className="py-3 pl-4 pr-4 font-bold uppercase tracking-wider w-[18%]">Item {!showHeader && <span className="text-[10px] text-slate-400 font-normal">(cont.)</span>}</th>
-                     <th className="py-3 pl-2 font-bold uppercase tracking-wider w-[32%]">Description</th>
+                     <th className="py-3 pl-4 pr-6 font-bold uppercase tracking-wider w-[20%]">Item {!showHeader && <span className="text-[10px] text-slate-400 font-normal">(cont.)</span>}</th>
+                     <th className="py-3 pl-4 font-bold uppercase tracking-wider w-[30%]">Description</th>
                      <th className="py-3 text-right w-[18%]">Rate</th>
                      <th className="py-3 text-center w-[12%]">Qty</th>
                      <th className="py-3 pr-4 text-right w-[20%]">Total</th>
@@ -321,7 +321,7 @@ export const QuotationTemplate = ({
                <tbody className="divide-y divide-slate-100">
                   {displayData.items.map((item, i) => (
                      <tr key={i} className="group">
-                        <td className="py-4 pl-4 pr-4 align-top">
+                        <td className="py-4 pl-4 pr-6 align-top">
                            {mode === 'edit' ? (
                              <input 
                                className="w-full font-bold text-slate-900 text-xs bg-transparent border-b border-transparent hover:border-slate-300 focus:outline-none focus:border-orange-500"
@@ -333,7 +333,7 @@ export const QuotationTemplate = ({
                              <p className="font-bold text-slate-900 text-xs leading-relaxed">{item.name}</p>
                            )}
                         </td>
-                        <td className="py-4 pl-2 pr-4 align-top">
+                        <td className="py-4 pl-4 pr-4 align-top">
                            {mode === 'edit' ? (
                              <textarea 
                                className="w-full text-xs text-slate-600 bg-transparent border-b border-transparent hover:border-slate-300 focus:outline-none focus:border-orange-500 resize-none leading-relaxed"
