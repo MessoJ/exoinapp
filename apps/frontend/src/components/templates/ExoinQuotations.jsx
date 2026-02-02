@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Printer, Download } from 'lucide-react';
 
-// --- UPDATED LOGO FOR QUOTE (Exact Match) ---
+// --- UPDATED LOGO FOR QUOTE - Simple, consistent rendering for preview and PDF ---
 export const QuoteLogo = ({ scale = 1, forExport = false }) => {
   const colors = {
       iconNavy: '#1E3A8A',
@@ -11,81 +11,79 @@ export const QuoteLogo = ({ scale = 1, forExport = false }) => {
       dot: '#F97316',
   };
 
-  const fontSize = 30 * scale;
-  const cutLineTopPreview = fontSize * 0.75;
-  const cutLineTopExport = fontSize * 0.72; // Adjusted to match clip-path (72%)
+  // Dimensions
+  const iconSize = 48;
+  const fontSize = 30;
+  const textWidth = 95;
+  const textHeight = 35;
 
   return (
-    <div className="group relative inline-flex items-center gap-3 select-none" style={{ transform: `scale(${scale})`, transformOrigin: 'left' }}>
+    <div style={{ 
+      display: 'inline-flex', 
+      alignItems: 'center', 
+      gap: '12px',
+      transform: `scale(${scale})`, 
+      transformOrigin: 'left' 
+    }}>
       {/* A. THE ICON */}
-      <div className="h-12 w-12 relative flex-shrink-0">
-        <svg viewBox="0 0 100 100" fill="none" className="w-full h-full">
-          <path 
-            d="M15 30 C15 21.7157 21.7157 15 30 15 H55 L55 45 L85 75 H60 C51.7157 75 45 68.2843 45 60 V60 L15 30 Z" 
-            fill={colors.iconNavy} 
-          />
-          <path 
-            d="M85 70 C85 78.2843 78.2843 85 70 85 H45 L45 55 L15 25 H40 C48.2843 25 55 31.7157 55 40 V40 L85 70 Z" 
-            fill={colors.iconOrange} 
-          />
-        </svg>
-      </div>
+      <svg viewBox="0 0 100 100" fill="none" width={iconSize} height={iconSize} style={{ flexShrink: 0, display: 'block' }}>
+        <path 
+          d="M15 30 C15 21.7157 21.7157 15 30 15 H55 L55 45 L85 75 H60 C51.7157 75 45 68.2843 45 60 V60 L15 30 Z" 
+          fill={colors.iconNavy} 
+        />
+        <path 
+          d="M85 70 C85 78.2843 78.2843 85 70 85 H45 L45 55 L15 25 H40 C48.2843 25 55 31.7157 55 40 V40 L85 70 Z" 
+          fill={colors.iconOrange} 
+        />
+      </svg>
 
-      {/* B. THE TYPOGRAPHY SECTION */}
-      <div className="flex flex-col justify-between h-11 py-0.5 w-full">
+      {/* B. THE TYPOGRAPHY SECTION - Using SVG for pixel-perfect PDF export */}
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '2px' }}>
         
-        {/* 1. EXOIN Main Text */}
-        <div className="relative leading-none">
-          {!forExport ? (
-            <h1 
-              className="text-3xl font-black tracking-tighter leading-none m-0"
-              style={{ 
-                color: colors.text,
-                fontFamily: 'sans-serif',
-                clipPath: 'polygon(0% 0%, 100% 0%, 100% 72%, 0% 72%, 0% 78%, 100% 78%, 100% 100%, 0% 100%)'
-              }}
-            >
-              EXOIN
-            </h1>
-          ) : (
-            <div className="relative" style={{ lineHeight: 0.8, marginTop: -4 * scale }}>
-              <h1 
-                className="text-3xl font-black tracking-tighter leading-none m-0"
-                style={{ 
-                  color: colors.text,
-                  fontFamily: 'sans-serif',
-                }}
-              >
-                EXOIN
-              </h1>
-              <div 
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  top: cutLineTopExport,
-                  height: 2 * scale,
-                  backgroundColor: '#ffffff',
-                }}
-              />
-            </div>
-          )}
-        </div>
+        {/* 1. EXOIN Main Text - SVG for consistent export (no cut line on white background) */}
+        <svg 
+          width={textWidth} 
+          height={textHeight} 
+          viewBox={`0 0 ${textWidth} ${textHeight}`}
+          style={{ display: 'block' }}
+        >
+          {/* EXOIN text */}
+          <text
+            x="0"
+            y={fontSize * 0.85}
+            fill={colors.text}
+            style={{
+              fontSize: `${fontSize}px`,
+              fontWeight: 900,
+              fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            EXOIN
+          </text>
+        </svg>
 
         {/* 2. AFRICA Integration */}
-        <div className="relative h-3 w-full flex items-center justify-end gap-2" style={forExport ? { marginBottom: 10 * scale } : {}}>
-          <div className="flex-shrink-0 flex items-center gap-1">
-            <div 
-              className="w-1 h-1 rounded-full" 
-              style={{ backgroundColor: colors.dot, boxShadow: `0 0 5px ${colors.dot}` }}
-            />
-            <span 
-              className="text-[8px] font-bold tracking-[0.5em] uppercase"
-              style={{ color: colors.subText }}
-            >
-              AFRICA
-            </span>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+          <div 
+            style={{ 
+              width: '5px', 
+              height: '5px', 
+              borderRadius: '50%',
+              backgroundColor: colors.dot, 
+            }}
+          />
+          <span 
+            style={{ 
+              fontSize: '8px', 
+              fontWeight: 700, 
+              letterSpacing: '0.25em', 
+              textTransform: 'uppercase',
+              color: colors.subText 
+            }}
+          >
+            AFRICA
+          </span>
         </div>
 
       </div>
@@ -105,7 +103,7 @@ export const QuotationTemplate = ({
   showHeader = true
 }) => {
   const defaultData = {
-    id: "Q-2025-089",
+    id: data.number || "QUO-XXXX",
     date: "October 27, 2025",
     expiry: "November 10, 2025", 
     client: {
@@ -173,7 +171,7 @@ export const QuotationTemplate = ({
   };
 
   return (
-    <div className="w-[595px] h-[842px] bg-white shadow-2xl relative flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 border-t-4 border-[#0F172A] overflow-hidden">
+    <div className="w-[595px] min-h-[842px] bg-white shadow-2xl relative flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 border-t-4 border-[#0F172A]" style={{ height: forExport ? '842px' : 'auto', overflow: forExport ? 'hidden' : 'visible' }}>
          
          {/* Watermark - positioned within body area */}
          <div className="absolute top-[150px] bottom-[80px] left-0 right-0 flex items-center justify-center pointer-events-none opacity-[0.04] overflow-hidden print:opacity-[0.06]">
@@ -184,9 +182,14 @@ export const QuotationTemplate = ({
 
          {/* Header */}
          {showHeader ? (
-           <div className="p-12 pb-6 flex justify-between items-end relative z-10">
+           <div className="p-12 pb-6 flex justify-between items-start relative z-10">
               <div>
                  <QuoteLogo scale={1.2} forExport={forExport} />
+                 <div className="mt-6 text-[9px] font-mono text-slate-500 uppercase tracking-wider space-y-1">
+                    <p>{displayData.companyName || 'EXOIN AFRICA LTD'}</p>
+                    <p>{displayData.companyAddress || 'Nairobi, Kenya'}</p>
+                    {displayData.companyTaxId && <p>{displayData.companyTaxId}</p>}
+                 </div>
               </div>
               <div className="text-right">
                  <h1 className="text-4xl font-light text-slate-300 uppercase tracking-widest leading-none">Quote</h1>
@@ -227,9 +230,9 @@ export const QuotationTemplate = ({
                      />
                      <input 
                        className="w-full bg-transparent border-b border-slate-300 text-slate-500 focus:outline-none focus:border-orange-500"
-                       value={displayData.client.dept}
-                       onChange={(e) => handleClientChange('dept', e.target.value)}
-                       placeholder="Department"
+                       value={displayData.client.contactPerson || ''}
+                       onChange={(e) => handleClientChange('contactPerson', e.target.value)}
+                       placeholder="Contact Person"
                      />
                      <input 
                        className="w-full bg-transparent border-b border-slate-300 text-slate-500 focus:outline-none focus:border-orange-500"
@@ -237,12 +240,29 @@ export const QuotationTemplate = ({
                        onChange={(e) => handleClientChange('address', e.target.value)}
                        placeholder="Address"
                      />
+                     <input 
+                       className="w-full bg-transparent border-b border-slate-300 text-slate-500 focus:outline-none focus:border-orange-500"
+                       value={displayData.client.phone || ''}
+                       onChange={(e) => handleClientChange('phone', e.target.value)}
+                       placeholder="Phone"
+                     />
+                     <input 
+                       className="w-full bg-transparent border-b border-slate-300 text-slate-500 focus:outline-none focus:border-orange-500"
+                       value={displayData.client.email || ''}
+                       onChange={(e) => handleClientChange('email', e.target.value)}
+                       placeholder="Email"
+                     />
                    </>
                  ) : (
                    <>
                      <p className="font-bold text-slate-900">{displayData.client.name}</p>
-                     <p className="text-slate-500">{displayData.client.dept}</p>
-                     <p className="text-slate-500">{displayData.client.address}</p>
+                     {displayData.client.contactPerson && <p className="text-slate-600">Attn: {displayData.client.contactPerson}</p>}
+                     {displayData.client.address && <p className="text-slate-500">{displayData.client.address}</p>}
+                     {(displayData.client.phone || displayData.client.email) && (
+                       <p className="text-slate-500">
+                         {displayData.client.phone}{displayData.client.phone && displayData.client.email && ' • '}{displayData.client.email}
+                       </p>
+                     )}
                    </>
                  )}
               </div>
@@ -458,13 +478,13 @@ export const QuotationTemplate = ({
             )}
          </div>
 
-         {/* Footer */}
-         <div className="mt-auto px-12 py-6 bg-[#0F172A] text-white flex justify-between items-center relative z-10">
-            <div className="text-[8px] font-mono opacity-70">
+         {/* Footer - Fixed at bottom */}
+         <div className="mt-auto px-12 py-4 bg-[#0F172A] text-white flex justify-between items-center relative z-10 flex-shrink-0" style={{ minHeight: '50px' }}>
+            <div style={{ fontSize: 8, fontFamily: 'monospace', opacity: 0.7 }}>
                <p>{(displayData.companyName || 'EXOIN AFRICA LTD').toUpperCase()} • {(displayData.companyAddress || 'NAIROBI HQ').toUpperCase()}</p>
                <p>VALID FOR 14 DAYS • TERMS APPLY</p>
             </div>
-            <div className="text-[8px] font-bold tracking-widest uppercase text-orange-500">
+            <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#F97316' }}>
                System Generated Quote
             </div>
          </div>

@@ -25,6 +25,19 @@ const DocumentPreview = ({ type, data, signature, showTotals, page, totalPages, 
   const isInvoice = type === 'invoice';
   
   // Map data to template format
+  // Build full address string - avoid duplicating city/country if already in address
+  const cityCountry = [data.clientCity, data.clientCountry].filter(Boolean).join(', ');
+  let fullAddress = data.clientAddress || '';
+  if (cityCountry && !fullAddress.toLowerCase().includes(cityCountry.toLowerCase())) {
+    fullAddress = [fullAddress, cityCountry].filter(Boolean).join(', ');
+  }
+  
+  // Build contact string
+  const contactParts = [];
+  if (data.clientPhone) contactParts.push(data.clientPhone);
+  if (data.clientEmail) contactParts.push(data.clientEmail);
+  const contactInfo = contactParts.join(' • ');
+  
   const templateData = {
     number: data.documentNumber,
     date: data.issueDate,
@@ -32,9 +45,11 @@ const DocumentPreview = ({ type, data, signature, showTotals, page, totalPages, 
     expiry: data.dueDate, // For quotation
     client: {
       name: data.clientName,
-      address: data.clientAddress,
-      city: data.clientCity || '', 
-      contact: data.clientEmail
+      contactPerson: data.clientContactPerson || '',
+      address: fullAddress || 'Address',
+      phone: data.clientPhone || '',
+      email: data.clientEmail || '',
+      contact: contactInfo || ''
     },
     scope: data.scope || '',
     taxable: data.taxable !== false,
@@ -316,12 +331,27 @@ const FinanceDocsPage = () => {
   // Generate preview data
   const getPreviewData = () => {
     const formData = watch();
+    
+    // Build full address from client fields - avoid duplicating city/country if already in address lines
+    const addressLines = [selectedClient?.addressLine1, selectedClient?.addressLine2].filter(Boolean).join(', ');
+    const cityCountry = [selectedClient?.city, selectedClient?.country].filter(Boolean).join(', ');
+    
+    // Only append city/country if they're not already in the address lines
+    let fullAddress = addressLines;
+    if (cityCountry && !addressLines.toLowerCase().includes(cityCountry.toLowerCase())) {
+      fullAddress = [addressLines, cityCountry].filter(Boolean).join(', ');
+    }
+    
     return {
       ...formData,
       documentNumber: savedDocument?.documentNumber || `${docType === 'invoice' ? 'INV' : 'QUO'}-${new Date().getFullYear()}-XXXX`,
       clientName: selectedClient?.name || 'Client Name',
-      clientAddress: selectedClient?.address || 'Address',
-      clientEmail: selectedClient?.email,
+      clientContactPerson: selectedClient?.contactPerson || '',
+      clientAddress: fullAddress || selectedClient?.address || '',
+      clientCity: selectedClient?.city || '',
+      clientCountry: selectedClient?.country || '',
+      clientPhone: selectedClient?.phone || '',
+      clientEmail: selectedClient?.email || '',
       items: watchItems.map(item => ({
         ...item,
         total: (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0)
@@ -378,9 +408,16 @@ const FinanceDocsPage = () => {
     setDownloading(true);
     try {
       const previewData = getPreviewData();
-      const itemsPerPage = 8;
+      // Reduce items per page to prevent overflow - first page has less room due to header/client info
+      const firstPageItems = 5;
+      const subsequentPageItems = 8;
       const items = previewData.items || [];
-      const totalPages = Math.ceil(items.length / itemsPerPage) || 1;
+      
+      // Calculate total pages
+      let totalPages = 1;
+      if (items.length > firstPageItems) {
+        totalPages = 1 + Math.ceil((items.length - firstPageItems) / subsequentPageItems);
+      }
 
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -397,10 +434,13 @@ const FinanceDocsPage = () => {
       tempContainer.style.backgroundColor = '#ffffff';
       document.body.appendChild(tempContainer);
 
+      let itemIndex = 0;
       for (let i = 0; i < totalPages; i++) {
-        const pageItems = items.slice(i * itemsPerPage, (i + 1) * itemsPerPage);
-        const isLastPage = i === totalPages - 1;
         const isFirstPage = i === 0;
+        const pageItemCount = isFirstPage ? firstPageItems : subsequentPageItems;
+        const pageItems = items.slice(itemIndex, itemIndex + pageItemCount);
+        itemIndex += pageItemCount;
+        const isLastPage = i === totalPages - 1;
         
         const pageData = {
           ...previewData,
@@ -412,6 +452,7 @@ const FinanceDocsPage = () => {
         pageDiv.style.width = '595px';
         pageDiv.style.height = '842px';
         pageDiv.style.backgroundColor = '#ffffff';
+        pageDiv.style.overflow = 'hidden';
         tempContainer.appendChild(pageDiv);
 
         // Render the component with forExport=true
@@ -446,15 +487,15 @@ const FinanceDocsPage = () => {
 
         const imgData = canvas.toDataURL('image/png');
         const imgWidth = 210; // A4 width in mm
-        const imgProps = pdf.getImageProperties(imgData);
-        const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+        const pageHeight = 297; // A4 height in mm
         
         // Add new page for pages after the first
         if (i > 0) {
           pdf.addPage();
         }
         
-        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+        // Always use full A4 dimensions to prevent cutoff
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, pageHeight);
 
         // Cleanup
         root.unmount();
@@ -967,14 +1008,21 @@ const FinanceDocsPage = () => {
                   <div className="transform scale-[0.3] origin-top-left space-y-4" style={{ width: '333%' }}>
                     {(() => {
                       const previewData = getPreviewData();
-                      const itemsPerPage = 8;
+                      const firstPageItems = 5;
+                      const subsequentPageItems = 8;
                       const items = previewData.items || [];
-                      const totalPages = Math.ceil(items.length / itemsPerPage) || 1;
+                      let totalPages = 1;
+                      if (items.length > firstPageItems) {
+                        totalPages = 1 + Math.ceil((items.length - firstPageItems) / subsequentPageItems);
+                      }
                       
+                      let itemIndex = 0;
                       return Array.from({ length: totalPages }).map((_, pageIndex) => {
-                        const pageItems = items.slice(pageIndex * itemsPerPage, (pageIndex + 1) * itemsPerPage);
-                        const isLastPage = pageIndex === totalPages - 1;
                         const isFirstPage = pageIndex === 0;
+                        const pageItemCount = isFirstPage ? firstPageItems : subsequentPageItems;
+                        const pageItems = items.slice(itemIndex, itemIndex + pageItemCount);
+                        itemIndex += pageItemCount;
+                        const isLastPage = pageIndex === totalPages - 1;
                         
                         const pageData = {
                           ...previewData,
@@ -1026,14 +1074,21 @@ const FinanceDocsPage = () => {
             <div ref={documentRef} className="space-y-4 sm:space-y-8 transform scale-[0.55] sm:scale-100 origin-top">
               {(() => {
                 const previewData = getPreviewData();
-                const itemsPerPage = 8;
+                const firstPageItems = 5;
+                const subsequentPageItems = 8;
                 const items = previewData.items || [];
-                const totalPages = Math.ceil(items.length / itemsPerPage) || 1;
+                let totalPages = 1;
+                if (items.length > firstPageItems) {
+                  totalPages = 1 + Math.ceil((items.length - firstPageItems) / subsequentPageItems);
+                }
                 
+                let itemIndex = 0;
                 return Array.from({ length: totalPages }).map((_, pageIndex) => {
-                  const pageItems = items.slice(pageIndex * itemsPerPage, (pageIndex + 1) * itemsPerPage);
-                  const isLastPage = pageIndex === totalPages - 1;
                   const isFirstPage = pageIndex === 0;
+                  const pageItemCount = isFirstPage ? firstPageItems : subsequentPageItems;
+                  const pageItems = items.slice(itemIndex, itemIndex + pageItemCount);
+                  itemIndex += pageItemCount;
+                  const isLastPage = pageIndex === totalPages - 1;
                   
                   const pageData = {
                     ...previewData,

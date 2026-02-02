@@ -2,8 +2,8 @@ import React from 'react';
 import { Phone, Mail, Globe, MapPin, QrCode, ShieldCheck, Smartphone, Zap } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
-// --- SHARED LOGO COMPONENT (Fixed for html2canvas compatibility) ---
-export const CardLogo = ({ variant = 'dark', scale = 1, iconOnly = false, forExport = false }) => {
+// --- SHARED LOGO COMPONENT (Consistent rendering for preview and export) ---
+export const CardLogo = ({ variant = 'dark', scale = 1, iconOnly = false, forExport = false, bgColor = null }) => {
   // Check for monochrome
   const isMonochrome = variant === 'monochrome';
   
@@ -12,6 +12,8 @@ export const CardLogo = ({ variant = 'dark', scale = 1, iconOnly = false, forExp
   const accentColor = isMonochrome ? '#FFFFFF' : '#F97316';
   const textColor = (variant === 'dark' || isMonochrome) ? '#FFFFFF' : '#0f172a';
   const subTextColor = (variant === 'dark' || isMonochrome) ? '#94a3b8' : '#64748b';
+  // Background for cut line - use provided bgColor or default based on variant
+  const cutLineColor = bgColor || ((variant === 'dark' || isMonochrome) ? '#0a0a0a' : '#FFFFFF');
   
   // Container size based on scale
   const iconSize = 40 * scale;
@@ -20,19 +22,13 @@ export const CardLogo = ({ variant = 'dark', scale = 1, iconOnly = false, forExp
   const gap = 10 * scale;
   const dotSize = 5 * scale;
   
-  // SEPARATE CONFIGURATION FOR PREVIEW AND EXPORT
-  // This ensures we can tune them independently to match visually
+  // Cut line dimensions - thin line at ~70% from top of text
+  const cutLineHeight = 1.5 * scale;
   
-  // Preview: 75% looks balanced on screen
-  const cutLineTopPreview = fontSize * 0.75;
-  
-  // Export: Needs to be lower (higher %) because of the text shift/rendering differences
-  const cutLineTopExport = fontSize * 0.88; 
-
-  const cutLineTop = forExport ? cutLineTopExport : cutLineTopPreview;
-  
-  // Reduced cut height for a thinner, more subtle cut
-  const cutLineHeight = 1.2 * scale;
+  // SVG text dimensions for "EXOIN"
+  const textWidth = 85 * scale;
+  const textHeight = fontSize;
+  const cutLineY = fontSize * 0.68; // 68% from top = where the cut line should be (matching the image)
 
   return (
     <div style={{ 
@@ -54,73 +50,36 @@ export const CardLogo = ({ variant = 'dark', scale = 1, iconOnly = false, forExp
       
       {!iconOnly && (
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          {/* EXOIN text with cut line */}
-          <div style={{ position: 'relative', lineHeight: 1 }}>
-            
-            {/* PREVIEW MODE: Use clip-path for perfect rendering */}
-            {!forExport ? (
-              <>
-                {/* Top Part */}
-                <span style={{ 
-                  fontSize: `${fontSize}px`, 
-                  fontWeight: 900, 
-                  letterSpacing: '-0.02em', 
-                  color: textColor,
-                  fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-                  lineHeight: 1,
-                  display: 'block',
-                  clipPath: `polygon(0 0, 100% 0, 100% ${cutLineTop}px, 0 ${cutLineTop}px)`
-                }}>
-                  EXOIN
-                </span>
-                {/* Bottom Part */}
-                <span style={{ 
-                  fontSize: `${fontSize}px`, 
-                  fontWeight: 900, 
-                  letterSpacing: '-0.02em', 
-                  color: textColor,
-                  fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-                  lineHeight: 1,
-                  display: 'block',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  clipPath: `polygon(0 ${cutLineTop + cutLineHeight}px, 100% ${cutLineTop + cutLineHeight}px, 100% 100%, 0 100%)`
-                }}>
-                  EXOIN
-                </span>
-              </>
-            ) : (
-              /* EXPORT MODE: Use solid line overlay (most robust for html2canvas layout) */
-              <>
-                 <span style={{ 
-                   fontSize: `${fontSize}px`, 
-                   fontWeight: 900, 
-                   letterSpacing: '-0.02em', 
-                   color: textColor,
-                   fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-                   lineHeight: 0.8, // Very tight line height to pull text up
-                   display: 'block',
-                   whiteSpace: 'nowrap',
-                   marginTop: `-${4 * scale}px`, // Pull EXOIN up significantly
-                   marginBottom: `${10 * scale}px`, // Large margin to force separation from dot
-                 }}>
-                   EXOIN
-                 </span>
-
-                 {/* Cut Line Overlay */}
-                 <div style={{
-                   position: 'absolute',
-                   top: `${cutLineTop}px`, 
-                   left: '-5%', 
-                   width: '110%',
-                   height: `${cutLineHeight}px`,
-                   backgroundColor: '#000000', 
-                   zIndex: 10
-                 }}></div>
-              </>
-            )}
-          </div>
+          {/* EXOIN text with cut line - Using SVG for pixel-perfect consistency */}
+          <svg 
+            width={textWidth} 
+            height={textHeight} 
+            viewBox={`0 0 ${textWidth} ${textHeight}`}
+            style={{ display: 'block', overflow: 'visible' }}
+          >
+            {/* EXOIN text - white/monochrome */}
+            <text
+              x="0"
+              y={fontSize * 0.76}
+              fill={textColor}
+              style={{
+                fontSize: `${fontSize}px`,
+                fontWeight: 900,
+                fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+                letterSpacing: '0.02em',
+              }}
+            >
+              EXOIN
+            </text>
+            {/* Cut line - thin horizontal line cutting through letters */}
+            <rect
+              x="0"
+              y={cutLineY}
+              width={textWidth}
+              height={cutLineHeight}
+              fill={cutLineColor}
+            />
+          </svg>
           
           {/* AFRICA subtitle with dot */}
           <div style={{ 
@@ -128,7 +87,7 @@ export const CardLogo = ({ variant = 'dark', scale = 1, iconOnly = false, forExp
             alignItems: 'center', 
             justifyContent: 'flex-end', 
             gap: `${3 * scale}px`,
-            marginTop: forExport ? 0 : `${2 * scale}px`
+            marginTop: `${2 * scale}px`
           }}>
             <div style={{ 
               width: `${dotSize}px`, 
@@ -180,10 +139,19 @@ ORG:Exoin Africa
 END:VCARD`;
 
   return (
-    <div className="flex flex-col xl:flex-row gap-16 items-center animate-in fade-in zoom-in duration-500">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '64px', alignItems: 'center' }}>
       
       {/* FRONT: The "Black Mirror" Look */}
-      <div className="relative w-[450px] h-[270px] rounded-2xl overflow-hidden border border-slate-800 bg-black group" id="card-front" style={{ boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}>
+      <div id="card-front" style={{ 
+        position: 'relative', 
+        width: '450px', 
+        height: '270px', 
+        borderRadius: '16px', 
+        overflow: 'hidden', 
+        border: '1px solid #1E293B', 
+        backgroundColor: '#000000',
+        boxShadow: '0 20px 50px rgba(0,0,0,0.3)' 
+      }}>
          
          {/* Ambient Tech Glow */}
          <div style={{
@@ -223,13 +191,12 @@ END:VCARD`;
          }}>
             <div style={{ 
               padding: '32px', 
-              backgroundColor: 'rgba(0,0,0,0.4)', 
-              backdropFilter: 'blur(12px)',
+              backgroundColor: '#0a0a0a', 
               borderRadius: '9999px', 
-              border: '1px solid rgba(255,255,255,0.05)',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
             }}>
-                <CardLogo variant="dark" scale={1.5} forExport={forExport} />
+                <CardLogo variant="dark" scale={1.5} forExport={forExport} bgColor="#0a0a0a" />
             </div>
          </div>
 
@@ -246,30 +213,68 @@ END:VCARD`;
       </div>
 
       {/* BACK: The "Data Key" Layout */}
-      <div className="relative w-[450px] h-[270px] rounded-2xl shadow-2xl overflow-hidden bg-white flex" id="card-back">
+      <div id="card-back" style={{ 
+        position: 'relative', 
+        width: '450px', 
+        height: '270px', 
+        borderRadius: '16px', 
+        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', 
+        overflow: 'hidden', 
+        backgroundColor: '#FFFFFF', 
+        display: 'flex' 
+      }}>
          
          {/* Left: Dark Data Spine */}
-         <div className="w-1/3 bg-[#0F172A] relative flex flex-col items-center justify-between border-r-4 border-orange-500 py-8">
-            <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+         <div style={{ 
+           width: '33.333333%', 
+           position: 'relative', 
+           display: 'flex', 
+           flexDirection: 'column', 
+           alignItems: 'center', 
+           justifyContent: 'space-between', 
+           paddingTop: '32px', 
+           paddingBottom: '32px',
+           backgroundColor: '#0F172A', 
+           borderRight: '4px solid #F97316' 
+         }}>
+            {/* Subtle pattern - CSS only, no external URL */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              opacity: 0.1,
+              backgroundImage: 'linear-gradient(45deg, #1E3A8A 25%, transparent 25%), linear-gradient(-45deg, #1E3A8A 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #1E3A8A 75%), linear-gradient(-45deg, transparent 75%, #1E3A8A 75%)',
+              backgroundSize: '20px 20px',
+              backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
+            }}></div>
             
-            <div className="flex flex-col items-center">
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 {/* Beautiful QR Code with Logo */}
-                <div className="relative">
-                  <div className="bg-gradient-to-br from-white to-slate-100 p-2.5 rounded-xl shadow-lg border border-white/20 mb-4">
+                <div style={{ position: 'relative' }}>
+                  <div style={{ 
+                    background: 'linear-gradient(to bottom right, #FFFFFF, #F1F5F9)', 
+                    padding: '8px', 
+                    borderRadius: '12px', 
+                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    marginBottom: '12px'
+                  }}>
                     {showQRCode ? (
-                      <div className="relative">
+                      <div style={{ position: 'relative' }}>
                         <QRCodeSVG 
                           value={vCardData}
-                          size={72}
-                          level="H"
+                          size={100}
+                          level="M"
                           bgColor="transparent"
                           fgColor="#0F172A"
                           includeMargin={false}
                         />
                         {/* Monochrome white logo overlay in center */}
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-5 h-5 bg-white rounded-sm flex items-center justify-center">
-                            <svg viewBox="0 0 100 100" fill="none" className="w-4 h-4">
+                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <div style={{ width: '24px', height: '24px', backgroundColor: '#FFFFFF', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <svg viewBox="0 0 100 100" fill="none" style={{ width: '20px', height: '20px' }}>
                               <path d="M15 30 C15 21.7157 21.7157 15 30 15 H55 L55 45 L85 75 H60 C51.7157 75 45 68.2843 45 60 V60 L15 30 Z" fill="#0F172A" />
                               <path d="M85 70 C85 78.2843 78.2843 85 70 85 H45 L45 55 L15 25 H40 C48.2843 25 55 31.7157 55 40 V40 L85 70 Z" fill="#0F172A" />
                             </svg>
@@ -277,60 +282,78 @@ END:VCARD`;
                         </div>
                       </div>
                     ) : (
-                      <QrCode size={72} className="text-[#0F172A]" />
+                      <QrCode size={100} className="text-[#0F172A]" />
                     )}
                   </div>
                   {/* Decorative corner accents */}
-                  <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-orange-500 rounded-tl-lg"></div>
-                  <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-blue-500 rounded-tr-lg"></div>
-                  <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-blue-500 rounded-bl-lg"></div>
-                  <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-orange-500 rounded-br-lg"></div>
+                  <div style={{ position: 'absolute', top: '-4px', left: '-4px', width: '12px', height: '12px', borderTop: '2px solid #F97316', borderLeft: '2px solid #F97316', borderTopLeftRadius: '8px' }}></div>
+                  <div style={{ position: 'absolute', top: '-4px', right: '-4px', width: '12px', height: '12px', borderTop: '2px solid #3B82F6', borderRight: '2px solid #3B82F6', borderTopRightRadius: '8px' }}></div>
+                  <div style={{ position: 'absolute', bottom: '-4px', left: '-4px', width: '12px', height: '12px', borderBottom: '2px solid #3B82F6', borderLeft: '2px solid #3B82F6', borderBottomLeftRadius: '8px' }}></div>
+                  <div style={{ position: 'absolute', bottom: '-4px', right: '-4px', width: '12px', height: '12px', borderBottom: '2px solid #F97316', borderRight: '2px solid #F97316', borderBottomRightRadius: '8px' }}></div>
                 </div>
-                <span className="text-[8px] font-bold text-white/50 uppercase tracking-widest text-center">Scan to<br/>Save Contact</span>
+                <span style={{ fontSize: '8px', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'center', display: 'block' }}>Scan to<br/>Save Contact</span>
             </div>
 
             {/* UPDATED: Monochrome Icon Alone (No Opacity for Pure White) */}
-            <div className="">
-                <CardLogo variant="monochrome" iconOnly={true} scale={0.8} forExport={forExport} />
+            <div>
+                <CardLogo variant="monochrome" iconOnly={true} scale={0.8} forExport={forExport} bgColor="#0F172A" />
             </div>
          </div>
 
          {/* Right: Clean Info Area */}
-         <div className="w-2/3 p-8 flex flex-col justify-center relative">
+         <div style={{ width: '66.666667%', padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative' }}>
 
-            <div className="mb-6">
-               <h3 className="text-2xl font-black text-slate-900 uppercase leading-none">{fullName}</h3>
-               <div className="flex items-center gap-2 mt-2">
-                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[8px] font-bold uppercase rounded">Verified</span>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{jobTitle}</span>
+            <div style={{ marginBottom: '24px' }}>
+               <h3 style={{ fontSize: '24px', fontWeight: 900, color: '#0F172A', textTransform: 'uppercase', lineHeight: 1, marginBottom: '12px' }}>{fullName}</h3>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {/* Verified badge as SVG for consistent export */}
+                  <svg width="52" height="16" viewBox="0 0 52 16" style={{ display: 'block', flexShrink: 0 }}>
+                    <rect x="0" y="0" width="52" height="16" rx="3" fill="#F97316" />
+                    <text 
+                      x="26" 
+                      y="11.5" 
+                      fill="#FFFFFF" 
+                      textAnchor="middle"
+                      style={{ 
+                        fontSize: '8px', 
+                        fontWeight: 700, 
+                        fontFamily: 'system-ui, -apple-system, sans-serif',
+                        letterSpacing: '0.05em',
+                        textTransform: 'uppercase'
+                      }}
+                    >
+                      VERIFIED
+                    </text>
+                  </svg>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: 1 }}>{jobTitle}</span>
                </div>
             </div>
 
-            <div className="space-y-2">
-               <div className="flex items-center gap-3 group cursor-pointer">
-                  <div className="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition-colors">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F97316' }}>
                      <Smartphone size={12} />
                   </div>
-                  <span className="text-xs font-medium text-slate-700">{phone}</span>
+                  <span style={{ fontSize: '12px', fontWeight: 500, color: '#334155' }}>{phone}</span>
                </div>
-               <div className="flex items-center gap-3 group cursor-pointer">
-                  <div className="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition-colors">
+               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F97316' }}>
                      <Mail size={12} />
                   </div>
-                  <span className="text-xs font-medium text-slate-700">{email}</span>
+                  <span style={{ fontSize: '12px', fontWeight: 500, color: '#334155' }}>{email}</span>
                </div>
-               <div className="flex items-center gap-3 group cursor-pointer">
-                  <div className="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition-colors">
+               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F97316' }}>
                      <Globe size={12} />
                   </div>
-                  <span className="text-xs font-medium text-slate-700">{website}</span>
+                  <span style={{ fontSize: '12px', fontWeight: 500, color: '#334155' }}>{website}</span>
                </div>
                {address && (
-                 <div className="flex items-center gap-3 group cursor-pointer">
-                    <div className="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition-colors">
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F97316' }}>
                        <MapPin size={12} />
                     </div>
-                    <span className="text-xs font-medium text-slate-700">{address}</span>
+                    <span style={{ fontSize: '12px', fontWeight: 500, color: '#334155' }}>{address}</span>
                  </div>
                )}
             </div>
