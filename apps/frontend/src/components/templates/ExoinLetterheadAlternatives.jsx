@@ -1,44 +1,11 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Globe, Hash, Calendar, MapPin, Lock } from 'lucide-react';
 
-// --- REUSABLE LOGO ---
-export const CardLogo = ({ variant = 'dark', scale = 1, forExport = false }) => {
-  const fillColor = variant === 'dark' ? '#FFFFFF' : '#1E3A8A';
-  const accentColor = '#F97316';
-  const textColor = variant === 'dark' ? 'text-white' : 'text-slate-900';
-  const lineColor = variant === 'dark' ? 'bg-[#020617]' : 'bg-white';
-  const subTextColor = variant === 'dark' ? 'text-slate-400' : 'text-slate-500';
+// --- REUSABLE OFFICIAL LOGO ---
+import { Logo } from "./Logo";
 
-  return (
-    <div className="flex items-center gap-3" style={{ transform: `scale(${scale})`, transformOrigin: 'left' }}>
-      <div className="h-9 w-9 relative flex-shrink-0 drop-shadow-sm">
-        <svg viewBox="0 0 100 100" fill="none" className="w-full h-full">
-          <path d="M15 30 C15 21.7157 21.7157 15 30 15 H55 L55 45 L85 75 H60 C51.7157 75 45 68.2843 45 60 V60 L15 30 Z" fill={fillColor} />
-          <path d="M85 70 C85 78.2843 78.2843 85 70 85 H45 L45 55 L15 25 H40 C48.2843 25 55 31.7157 55 40 V40 L85 70 Z" fill={accentColor} />
-        </svg>
-      </div>
-      <div className="flex flex-col justify-center">
-          <div className="relative leading-none mb-0.5">
-            <h1 className={`text-2xl font-black tracking-tighter leading-none m-0 ${textColor}`} style={{ fontFamily: 'sans-serif' }}>
-                EXOIN
-            </h1>
-            {/* Line Overlay - Adjusted for Export */}
-            <div 
-              className={`absolute left-0 w-full ${lineColor}`}
-              style={{ 
-                top: forExport ? '92%' : '92%', 
-                height: forExport ? '2px' : '1px',
-                zIndex: 10 
-              }}
-            ></div>
-          </div>
-          <div className="flex items-center justify-end gap-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div>
-            <span className={`text-[7px] font-bold tracking-[0.4em] uppercase ${subTextColor}`}>AFRICA</span>
-          </div>
-      </div>
-    </div>
-  );
+export const CardLogo = ({ variant = "dark", scale = 1, forExport = false }) => {
+  return <Logo scale={scale} forExport={forExport} variant={variant === "dark" ? "dark" : "default"} />;
 };
 
 export const LetterheadTemplate = ({ 

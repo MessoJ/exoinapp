@@ -1,98 +1,15 @@
 import React, { useState } from 'react';
 import { Printer, Download } from 'lucide-react';
 
-// --- UPDATED LOGO FOR QUOTE - Simple, consistent rendering for preview and PDF ---
+// --- LOGO FOR QUOTE ---
+import { Logo } from "./Logo";
+
 export const QuoteLogo = ({ scale = 1, forExport = false }) => {
-  const colors = {
-      iconNavy: '#1E3A8A',
-      iconOrange: '#F97316',
-      text: '#0F172A',
-      subText: '#64748B',
-      dot: '#F97316',
-  };
-
-  // Dimensions
-  const iconSize = 48;
-  const fontSize = 30;
-  const textWidth = 95;
-  const textHeight = 35;
-
-  return (
-    <div style={{ 
-      display: 'inline-flex', 
-      alignItems: 'center', 
-      gap: '12px',
-      transform: `scale(${scale})`, 
-      transformOrigin: 'left' 
-    }}>
-      {/* A. THE ICON */}
-      <svg viewBox="0 0 100 100" fill="none" width={iconSize} height={iconSize} style={{ flexShrink: 0, display: 'block' }}>
-        <path 
-          d="M15 30 C15 21.7157 21.7157 15 30 15 H55 L55 45 L85 75 H60 C51.7157 75 45 68.2843 45 60 V60 L15 30 Z" 
-          fill={colors.iconNavy} 
-        />
-        <path 
-          d="M85 70 C85 78.2843 78.2843 85 70 85 H45 L45 55 L15 25 H40 C48.2843 25 55 31.7157 55 40 V40 L85 70 Z" 
-          fill={colors.iconOrange} 
-        />
-      </svg>
-
-      {/* B. THE TYPOGRAPHY SECTION - Using SVG for pixel-perfect PDF export */}
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '2px' }}>
-        
-        {/* 1. EXOIN Main Text - SVG for consistent export (no cut line on white background) */}
-        <svg 
-          width={textWidth} 
-          height={textHeight} 
-          viewBox={`0 0 ${textWidth} ${textHeight}`}
-          style={{ display: 'block' }}
-        >
-          {/* EXOIN text */}
-          <text
-            x="0"
-            y={fontSize * 0.85}
-            fill={colors.text}
-            style={{
-              fontSize: `${fontSize}px`,
-              fontWeight: 900,
-              fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            EXOIN
-          </text>
-        </svg>
-
-        {/* 2. AFRICA Integration */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-          <div 
-            style={{ 
-              width: '5px', 
-              height: '5px', 
-              borderRadius: '50%',
-              backgroundColor: colors.dot, 
-            }}
-          />
-          <span 
-            style={{ 
-              fontSize: '8px', 
-              fontWeight: 700, 
-              letterSpacing: '0.25em', 
-              textTransform: 'uppercase',
-              color: colors.subText 
-            }}
-          >
-            AFRICA
-          </span>
-        </div>
-
-      </div>
-    </div>
-  );
+  return <Logo scale={scale} forExport={forExport} variant="default" />;
 };
 
 export const QuotationTemplate = ({
-  mode = 'view', // 'view' or 'edit'
+  mode = 'view',
   data = {},
   onUpdate = () => {},
   showTotals = true,
@@ -103,45 +20,40 @@ export const QuotationTemplate = ({
   showHeader = true
 }) => {
   const defaultData = {
-    id: data.number || "QUO-XXXX",
-    date: "October 27, 2025",
-    expiry: "November 10, 2025", 
+    id: data.number || "INVYKBUXVU",
+    date: "2026-10-22 11:22:23",
+    expiry: "2026-11-22", 
     client: {
-      name: "Safaricom PLC",
-      dept: "Facilities Management",
-      address: "Waiyaki Way, HQ2",
-      city: "Nairobi, Kenya"
+      name: "KRA WESTERN REGION OFFICE",
+      dept: "Regional Administration",
+      address: "Lake Hub Mall Kisumu",
+      city: "Kisumu, Kenya",
+      phone: "+254722856810",
+      email: "callcenter@kra.go.ke",
+      pin: ""
     },
-    scope: "Exoin Africa proposes the following autonomous hygiene solution tailored to your facility's specifications. This quote includes equipment deployment, software integration, and ongoing maintenance.",
-    taxable: true, // Toggle for VAT/Tax
-    taxRate: 16, // Tax rate percentage
+    scope: "Exoin Africa proposes the following specialized hygiene and pest control solution tailored to your facility specifications.",
+    taxable: true,
+    taxRate: 16,
     items: [
       { 
-        name: "Scout S-1 Service",
-        title: "Autonomous Floor Scrubbing (Lobby & Corridors)", 
-        desc: "Deployment of Model S-1 'Scout' units for daily maintenance. Includes mapping and AI obstacle avoidance setup.",
-        unit: "Month", qty: 12, rate: 85000, total: 1020000 
-      },
-      { 
-        name: "Decontamination Service",
-        title: "Data Center Decontamination (Tier 3)", 
-        desc: "ISO 14644-1 Class 8 particulate removal. Anti-static protocols. Bi-annual service.",
-        unit: "Service", qty: 2, rate: 120000, total: 240000 
-      },
-      { 
-        name: "Supply Kit",
-        title: "Tactical Supply Kit", 
-        desc: "Power Scrub™ agents (200L) + consumables for on-site staff.",
-        unit: "Quarterly", qty: 4, rate: 45000, total: 180000 
-      },
+        name: "Fumigation and Pest Control Service AT KRA WEBUYE RRU",
+        title: "Fumigation and Pest Control Service AT KRA WEBUYE RRU", 
+        desc: "Autonomous and targeted chemical barrier pest control service.",
+        unit: "Service", qty: 1, rate: 9850, total: 9850 
+      }
     ],
-    subtotal: 1440000,
-    tax: 230400, // 16% VAT
-    total: 1670400,
+    subtotal: 8491.38,
+    tax: 1358.62,
+    total: 9850.00,
+    paymentMethod: 'mpesa',
     notes: '',
     terms: '',
-    companyName: 'Exoin Africa Ltd.',
-    companyAddress: 'Nairobi HQ • Westlands Tower',
+    companyName: 'EXOIN AFRICA',
+    companyPin: 'A015776087P',
+    companyEmail: 'mesofrancis@outlook.com',
+    companyPhone: '0739443244',
+    companyAddress: '48706, 00100, Nairobi, Kenya',
     ...data
   };
 
@@ -154,9 +66,8 @@ export const QuotationTemplate = ({
   const handleItemChange = (index, field, value) => {
     const newItems = [...displayData.items];
     newItems[index] = { ...newItems[index], [field]: value };
-    // Recalculate total
     if (field === 'qty' || field === 'rate') {
-      newItems[index].total = newItems[index].qty * newItems[index].rate;
+      newItems[index].total = Number(newItems[index].qty || 0) * Number(newItems[index].rate || 0);
     }
     onUpdate('items', newItems);
   };
@@ -171,10 +82,10 @@ export const QuotationTemplate = ({
   };
 
   return (
-    <div className="w-[595px] min-h-[842px] bg-white shadow-2xl relative flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 border-t-4 border-[#0F172A]" style={{ height: forExport ? '842px' : 'auto', overflow: forExport ? 'hidden' : 'visible' }}>
+    <div className="w-[595px] min-h-[842px] bg-white shadow-2xl relative flex flex-col animate-in fade-in duration-500 border-t-4 border-[#1E3A8A]" style={{ height: forExport ? '842px' : 'auto', overflow: forExport ? 'hidden' : 'visible' }}>
          
-         {/* Watermark - positioned within body area */}
-         <div className="absolute top-[150px] bottom-[80px] left-0 right-0 flex items-center justify-center pointer-events-none opacity-[0.04] overflow-hidden print:opacity-[0.06]">
+         {/* Watermark */}
+         <div className="absolute top-[150px] bottom-[80px] left-0 right-0 flex items-center justify-center pointer-events-none opacity-[0.03] overflow-hidden print:opacity-[0.05]">
             <div className="transform -rotate-12">
                <QuoteLogo scale={4} forExport={forExport} />
             </div>
@@ -182,44 +93,48 @@ export const QuotationTemplate = ({
 
          {/* Header */}
          {showHeader ? (
-           <div className="p-12 pb-6 flex justify-between items-start relative z-10">
+           <div className="p-10 pb-5 flex justify-between items-start relative z-10 border-b border-slate-100">
               <div>
-                 <QuoteLogo scale={1.2} forExport={forExport} />
-                 <div className="mt-6 text-[9px] font-mono text-slate-500 uppercase tracking-wider space-y-1">
-                    <p>{displayData.companyName || 'EXOIN AFRICA LTD'}</p>
-                    <p>{displayData.companyAddress || 'Nairobi, Kenya'}</p>
-                    {displayData.companyTaxId && <p>{displayData.companyTaxId}</p>}
+                 <QuoteLogo scale={1.15} forExport={forExport} />
+                 <div className="mt-4 text-[9px] font-mono text-slate-500 uppercase tracking-wider space-y-0.5">
+                    <p className="font-bold text-slate-800 text-[10px]">{displayData.companyName || 'EXOIN AFRICA'}</p>
+                    <p>PIN: <span className="text-slate-900 font-bold">{displayData.companyPin || 'A015776087P'}</span></p>
+                    <p>{displayData.companyEmail || 'mesofrancis@outlook.com'}</p>
+                    <p>{displayData.companyPhone || '0739443244'}</p>
+                    <p>{displayData.companyAddress || '48706, 00100, Nairobi, Kenya'}</p>
                  </div>
               </div>
+
               <div className="text-right">
-                 <h1 className="text-4xl font-light text-slate-300 uppercase tracking-widest leading-none">Quote</h1>
-                 <p className="text-xs font-bold text-[#0F172A] mt-1">
-                   REF: {mode === 'edit' ? (
+                 <h1 className="text-3xl font-light text-slate-400 uppercase tracking-widest leading-none">Quotation</h1>
+                 <p className="text-xs font-bold text-[#0F172A] mt-1.5 font-mono">
+                   NO: {mode === 'edit' ? (
                      <input 
-                       className="bg-transparent border-b border-slate-300 w-24 text-right focus:outline-none focus:border-orange-500"
+                       className="bg-transparent border-b border-slate-300 w-28 text-right focus:outline-none focus:border-orange-500"
                        value={displayData.id}
                        onChange={(e) => onUpdate('id', e.target.value)}
                      />
                    ) : displayData.id}
                  </p>
-                 <p className="text-[10px] text-slate-400 mt-1">Page {page} of {totalPages}</p>
+                 <p className="text-[10px] text-slate-400 mt-0.5 font-mono">Date: {displayData.date}</p>
+                 <p className="text-[9px] text-slate-400 mt-0.5">Page {page} of {totalPages}</p>
               </div>
            </div>
          ) : (
-           <div className="p-12 pb-6 flex justify-end items-end relative z-10">
+           <div className="p-10 pb-4 flex justify-end items-end relative z-10">
               <div className="text-right">
-                 <h1 className="text-4xl font-light text-slate-300 uppercase tracking-widest leading-none">Quote</h1>
-                 <p className="text-xs font-bold text-[#0F172A] mt-1">REF: {displayData.id}</p>
-                 <p className="text-[10px] text-slate-400 mt-1">Page {page} of {totalPages}</p>
+                 <h1 className="text-3xl font-light text-slate-400 uppercase tracking-widest leading-none">Quotation</h1>
+                 <p className="text-xs font-bold text-[#0F172A] mt-1 font-mono">NO: {displayData.id}</p>
+                 <p className="text-[9px] text-slate-400 mt-0.5">Page {page} of {totalPages}</p>
               </div>
            </div>
          )}
 
-         {/* Grid Data */}
+         {/* Client Coordinates */}
          {showHeader && (
-           <div className="mx-12 py-6 border-t border-b border-slate-100 flex justify-between relative z-10">
+           <div className="mx-10 py-4 border-b border-slate-100 flex justify-between relative z-10">
               <div className="text-xs space-y-1 w-1/2">
-                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Prepared For</p>
+                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Quotation To:</p>
                  {mode === 'edit' ? (
                    <>
                      <input 
@@ -230,13 +145,7 @@ export const QuotationTemplate = ({
                      />
                      <input 
                        className="w-full bg-transparent border-b border-slate-300 text-slate-500 focus:outline-none focus:border-orange-500"
-                       value={displayData.client.contactPerson || ''}
-                       onChange={(e) => handleClientChange('contactPerson', e.target.value)}
-                       placeholder="Contact Person"
-                     />
-                     <input 
-                       className="w-full bg-transparent border-b border-slate-300 text-slate-500 focus:outline-none focus:border-orange-500"
-                       value={displayData.client.address}
+                       value={displayData.client.address || ''}
                        onChange={(e) => handleClientChange('address', e.target.value)}
                        placeholder="Address"
                      />
@@ -246,127 +155,78 @@ export const QuotationTemplate = ({
                        onChange={(e) => handleClientChange('phone', e.target.value)}
                        placeholder="Phone"
                      />
-                     <input 
-                       className="w-full bg-transparent border-b border-slate-300 text-slate-500 focus:outline-none focus:border-orange-500"
-                       value={displayData.client.email || ''}
-                       onChange={(e) => handleClientChange('email', e.target.value)}
-                       placeholder="Email"
-                     />
                    </>
                  ) : (
                    <>
                      <p className="font-bold text-slate-900">{displayData.client.name}</p>
-                     {displayData.client.contactPerson && <p className="text-slate-600">Attn: {displayData.client.contactPerson}</p>}
-                     {displayData.client.address && <p className="text-slate-500">{displayData.client.address}</p>}
-                     {(displayData.client.phone || displayData.client.email) && (
-                       <p className="text-slate-500">
-                         {displayData.client.phone}{displayData.client.phone && displayData.client.email && ' • '}{displayData.client.email}
-                       </p>
-                     )}
+                     {displayData.client.address && <p className="text-slate-600">{displayData.client.address}</p>}
+                     {displayData.client.email && <p className="text-slate-500">{displayData.client.email}</p>}
+                     {displayData.client.phone && <p className="text-slate-500">{displayData.client.phone}</p>}
                    </>
                  )}
               </div>
+
               <div className="text-xs space-y-1 text-right">
-                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Validity</p>
-                 <div className="flex items-center justify-end gap-2">
-                    <span className="text-slate-500">Issued:</span>
-                    {mode === 'edit' ? (
-                      <input 
-                        className="bg-transparent border-b border-slate-300 w-24 text-right focus:outline-none focus:border-orange-500 font-mono"
-                        value={displayData.date}
-                        onChange={(e) => onUpdate('date', e.target.value)}
-                      />
-                    ) : (
-                      <span className="font-mono">{displayData.date}</span>
-                    )}
+                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Terms & Validity</p>
+                 <div className="flex items-center justify-end gap-2 text-slate-600 text-[11px]">
+                    <span className="text-slate-400">Payment:</span>
+                    <span className="font-semibold uppercase">{displayData.paymentMethod || 'mpesa / wire'}</span>
                  </div>
-                 <div className="flex items-center justify-end gap-2">
-                    <span className="text-slate-500">Expires:</span>
-                    {mode === 'edit' ? (
-                      <input 
-                        className="bg-transparent border-b border-slate-300 w-24 text-right focus:outline-none focus:border-orange-500 font-mono text-orange-600 font-bold"
-                        value={displayData.expiry}
-                        onChange={(e) => onUpdate('expiry', e.target.value)}
-                      />
-                    ) : (
-                      <span className="font-mono text-orange-600 font-bold">{displayData.expiry}</span>
-                    )}
+                 <div className="flex items-center justify-end gap-2 text-slate-600 text-[11px]">
+                    <span className="text-slate-400">Validity:</span>
+                    <span className="font-semibold text-orange-600">30 Calendar Days</span>
                  </div>
               </div>
            </div>
          )}
 
-         {/* Body */}
-         <div className="p-12 flex-grow relative z-10">
-            {/* Tax Toggle - Edit Mode Only */}
-            {mode === 'edit' && showHeader && (
-              <div className="mb-4 flex items-center gap-3">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="checkbox"
-                    checked={displayData.taxable !== false}
-                    onChange={(e) => onUpdate('taxable', e.target.checked)}
-                    className="w-4 h-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500"
-                  />
-                  <span className="text-xs text-slate-600 font-medium">Apply VAT/Tax</span>
-                </label>
-                {displayData.taxable !== false && (
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-slate-400">Rate:</span>
-                    <input 
-                      type="number"
-                      className="w-14 text-xs text-center bg-transparent border border-slate-200 rounded px-1 py-0.5 focus:outline-none focus:border-orange-500"
-                      value={displayData.taxRate || 16}
-                      onChange={(e) => onUpdate('taxRate', parseFloat(e.target.value) || 0)}
-                      min="0"
-                      max="100"
-                    />
-                    <span className="text-xs text-slate-400">%</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* FIXED TABLE LAYOUT */}
-            <table className="w-full text-left text-xs mb-12 table-fixed">
-               <thead className="bg-slate-50 text-slate-500">
+         {/* Items Table */}
+         <div className="p-10 flex-grow relative z-10">
+            <table className="w-full text-left text-xs mb-8 table-fixed">
+               <thead className="bg-slate-50 text-slate-500 border-y border-slate-200/60">
                   <tr>
-                     <th className="py-3 pl-4 pr-6 font-bold uppercase tracking-wider w-[20%]">Item {!showHeader && <span className="text-[10px] text-slate-400 font-normal">(cont.)</span>}</th>
-                     <th className="py-3 pl-4 font-bold uppercase tracking-wider w-[30%]">Description</th>
-                     <th className="py-3 text-right w-[18%]">Rate</th>
-                     <th className="py-3 text-center w-[12%]">Qty</th>
-                     <th className="py-3 pr-4 text-right w-[20%]">Total</th>
+                     <th className="py-2.5 pl-3 pr-2 font-bold uppercase tracking-wider w-[45%]">Item & Scope</th>
+                     <th className="py-2.5 text-center w-[12%]">Qty</th>
+                     <th className="py-2.5 text-right w-[18%]">Price (KES)</th>
+                     <th className="py-2.5 text-center w-[12%]">Tax</th>
+                     <th className="py-2.5 pr-3 text-right w-[18%]">Total</th>
                   </tr>
                </thead>
                <tbody className="divide-y divide-slate-100">
                   {displayData.items.map((item, i) => (
                      <tr key={i} className="group">
-                        <td className="py-4 pl-4 pr-6 align-top">
+                        <td className="py-3 pl-3 pr-2 align-top">
                            {mode === 'edit' ? (
                              <input 
                                className="w-full font-bold text-slate-900 text-xs bg-transparent border-b border-transparent hover:border-slate-300 focus:outline-none focus:border-orange-500"
-                               value={item.name || ''}
+                               value={item.name || item.title || ''}
                                onChange={(e) => handleItemChange(i, 'name', e.target.value)}
-                               placeholder="Item Name"
+                               placeholder="Item Description"
                              />
                            ) : (
-                             <p className="font-bold text-slate-900 text-xs leading-relaxed">{item.name}</p>
+                             <div>
+                               <p className="font-semibold text-slate-900 leading-snug">{item.name || item.title}</p>
+                               {item.desc && item.desc !== item.name && (
+                                 <p className="text-[10px] text-slate-500 mt-0.5">{item.desc}</p>
+                               )}
+                             </div>
                            )}
                         </td>
-                        <td className="py-4 pl-4 pr-4 align-top">
-                           {mode === 'edit' ? (
-                             <textarea 
-                               className="w-full text-xs text-slate-600 bg-transparent border-b border-transparent hover:border-slate-300 focus:outline-none focus:border-orange-500 resize-none leading-relaxed"
-                               value={item.desc || item.title || ''}
-                               onChange={(e) => handleItemChange(i, 'desc', e.target.value)}
-                               placeholder="Item description..."
-                               rows={2}
-                             />
-                           ) : (
-                             <p className="text-xs text-slate-600 leading-relaxed">{item.desc || item.title}</p>
-                           )}
+
+                        <td className="py-3 text-center font-mono text-slate-600 align-top">
+                          {mode === 'edit' ? (
+                            <input 
+                              type="number"
+                              className="w-12 text-center bg-transparent border-b border-transparent hover:border-slate-300 focus:outline-none focus:border-orange-500"
+                              value={item.qty}
+                              onChange={(e) => handleItemChange(i, 'qty', parseFloat(e.target.value) || 0)}
+                            />
+                          ) : (
+                            Number(item.qty || 1).toFixed(2)
+                          )}
                         </td>
-                        <td className="py-4 text-right font-mono text-slate-500 align-top">
+
+                        <td className="py-3 text-right font-mono text-slate-700 align-top">
                           {mode === 'edit' ? (
                             <input 
                               type="number"
@@ -374,149 +234,101 @@ export const QuotationTemplate = ({
                               value={item.rate}
                               onChange={(e) => handleItemChange(i, 'rate', parseFloat(e.target.value) || 0)}
                             />
-                          ) : item.rate.toLocaleString()}
-                        </td>
-                        <td className="py-4 text-center font-mono text-slate-500 align-top">
-                          {mode === 'edit' ? (
-                            <input 
-                              type="number"
-                              className="w-full text-center bg-transparent border-b border-transparent hover:border-slate-300 focus:outline-none focus:border-orange-500"
-                              value={item.qty}
-                              onChange={(e) => handleItemChange(i, 'qty', parseFloat(e.target.value) || 0)}
-                            />
-                          ) : item.qty}
-                        </td>
-                        <td className="py-4 pr-4 text-right font-mono font-bold text-slate-900 align-top relative">
-                          {item.total.toLocaleString()}
-                          {mode === 'edit' && (
-                            <button 
-                              onClick={() => removeItem(i)}
-                              className="absolute -right-2 top-4 text-red-500 opacity-0 group-hover:opacity-100"
-                            >
-                              ×
-                            </button>
+                          ) : (
+                            Number(item.rate || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })
                           )}
+                        </td>
+
+                        <td className="py-3 text-center text-slate-500 align-top text-[10px] font-mono">
+                          B 16%
+                        </td>
+
+                        <td className="py-3 pr-3 text-right font-mono font-bold text-slate-900 align-top">
+                          {Number(item.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </td>
                      </tr>
                   ))}
                </tbody>
             </table>
+
             {mode === 'edit' && (
               <button 
                 onClick={addItem}
-                className="text-xs text-orange-600 font-bold hover:text-orange-700 mb-8"
+                className="text-xs text-orange-600 font-bold hover:text-orange-700 mb-6 flex items-center gap-1"
               >
                 + Add Item
               </button>
             )}
 
-            {/* Summary */}
+            {/* Calculations Breakdown */}
             {showTotals && (
-              <div className="flex flex-col">
-                 {/* Totals Box */}
-                 <div className="flex justify-end mb-6">
-                   <div className="w-1/2 p-6 bg-slate-50 border-t-2 border-[#0F172A]">
-                      <div className="flex justify-between text-xs text-slate-500 mb-2">
-                         <span>Subtotal</span>
-                         <span className="font-mono">{displayData.subtotal.toLocaleString()}</span>
+              <div className="flex justify-end mb-6">
+                <div className="w-64 p-4 bg-slate-50 rounded-2xl border border-slate-200/60 space-y-2 text-xs">
+                   <div className="flex justify-between text-slate-500">
+                      <span>Subtotal</span>
+                      <span className="font-mono">{Number(displayData.subtotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                   </div>
+                   <div className="flex justify-between text-slate-500">
+                      <span>Total VAT (16%)</span>
+                      <span className="font-mono">{Number(displayData.tax || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                   </div>
+                   <div className="flex justify-between text-slate-500">
+                      <span>Total Discount</span>
+                      <span className="font-mono">0.00</span>
+                   </div>
+                   <div className="flex justify-between items-end pt-2 border-t border-slate-200">
+                      <span className="text-xs font-bold text-slate-900 uppercase">Total Amount</span>
+                      <div className="text-right">
+                          <span className="text-[10px] text-slate-400 font-bold mr-1">KES</span>
+                          <span className="text-lg font-black text-orange-600">
+                            {Number(displayData.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          </span>
                       </div>
-                      {displayData.taxable !== false && (
-                        <div className="flex justify-between text-xs text-slate-500 mb-4">
-                           <span>Tax ({displayData.taxRate || 16}%)</span>
-                           <span className="font-mono">{displayData.tax.toLocaleString()}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between items-end pt-4 border-t border-slate-200">
-                         <span className="text-sm font-bold text-slate-900 uppercase tracking-widest">Total</span>
-                         <div className="text-right">
-                             <span className="text-xs text-slate-400 font-bold mr-2">KES</span>
-                             <span className="text-2xl font-black text-orange-600">{displayData.total.toLocaleString()}</span>
-                         </div>
-                      </div>
                    </div>
-                 </div>
+                </div>
+              </div>
+            )}
 
-                 {/* Scope of Work - After Totals */}
-                 {displayData.scope && (
-                   <div className="mb-6">
-                     <h3 className="text-sm font-bold text-[#0F172A] uppercase border-l-4 border-orange-500 pl-3 mb-2">Scope of Works</h3>
-                     <p className="text-xs text-slate-500 leading-relaxed whitespace-pre-wrap">
-                       {displayData.scope}
-                     </p>
-                   </div>
-                 )}
-
-                 {/* Notes & Terms */}
-                 {(displayData.notes || displayData.terms) && (
-                   <div className="mb-6 p-4 bg-slate-50 border-l-2 border-orange-500">
-                     {displayData.notes && (
-                       <div className="mb-3">
-                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Notes</p>
-                         <p className="text-[10px] text-slate-600 leading-relaxed whitespace-pre-wrap">{displayData.notes}</p>
-                       </div>
-                     )}
-                     {displayData.terms && (
-                       <div>
-                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Terms & Conditions</p>
-                         <p className="text-[10px] text-slate-500 leading-relaxed whitespace-pre-wrap">{displayData.terms}</p>
-                       </div>
-                     )}
-                   </div>
-                 )}
-                 
-                 {/* Signature */}
-                 {signature && (
-                   <div className="flex justify-end">
-                     <div className="flex flex-col items-end">
-                       <img src={signature} alt="Signature" className="h-16 object-contain mb-2" />
-                       <div className="w-48 border-t border-slate-300"></div>
-                       <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">Authorized Signature</p>
-                     </div>
-                   </div>
-                 )}
+            {/* Optional Signature */}
+            {signature && (
+              <div className="flex justify-end mt-4">
+                <div className="flex flex-col items-end">
+                  <img src={signature} alt="Authorized Signature" className="h-12 object-contain mb-1" />
+                  <div className="w-40 border-t border-slate-300"></div>
+                  <p className="text-[9px] text-slate-400 mt-0.5 uppercase tracking-wider">Authorized Signature</p>
+                </div>
               </div>
             )}
          </div>
 
-         {/* Footer - Fixed at bottom */}
-         <div className="mt-auto px-12 py-4 bg-[#0F172A] text-white flex justify-between items-center relative z-10 flex-shrink-0" style={{ minHeight: '50px' }}>
-            <div style={{ fontSize: 8, fontFamily: 'monospace', opacity: 0.7 }}>
-               <p>{(displayData.companyName || 'EXOIN AFRICA LTD').toUpperCase()} • {(displayData.companyAddress || 'NAIROBI HQ').toUpperCase()}</p>
-               <p>VALID FOR 14 DAYS • TERMS APPLY</p>
-            </div>
-            <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#F97316' }}>
-               System Generated Quote
-            </div>
+         {/* Kenya Tax / eTIMS Verification Banner */}
+         <div className="px-10 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[8px] font-mono text-slate-500 uppercase tracking-widest relative z-10">
+            <span>ISSUED UNDER ECITIZEN & KENYA REVENUE AUTHORITY</span>
+            <span className="text-orange-600 font-bold">ETIMS COMPLIANT</span>
          </div>
 
+         {/* Official Navy Footer */}
+         <div className="mt-auto px-10 py-3.5 bg-[#0F172A] text-white flex justify-between items-center relative z-10 flex-shrink-0">
+            <div className="text-[8px] font-mono text-slate-400 uppercase">
+               <span>EXOIN AFRICA • TEL: 0739443244 • WWW.EXOIN.AFRICA</span>
+            </div>
+            <div className="text-[8px] font-bold tracking-widest uppercase text-orange-500">
+               Official Quotation
+            </div>
+         </div>
     </div>
   );
 };
 
 const ExoinQuotations = () => {
-  const [activeOption, setActiveOption] = useState('option1'); // Option A selected
-
   return (
-    <div className="min-h-screen bg-slate-100 font-sans text-slate-800 flex flex-col items-center py-12 px-4">
-      
-      <div className="mb-8 text-center">
-        <h2 className="text-2xl font-bold text-slate-800 mb-2">Sales Proposals</h2>
-        <p className="text-slate-500 text-sm">Ready for Production • A4 Standard</p>
+    <div className="min-h-screen bg-slate-100 font-sans text-slate-800 flex flex-col items-center py-10 px-4">
+      <div className="mb-6 text-center">
+        <h2 className="text-2xl font-bold text-slate-900">Commercial Quotation</h2>
+        <p className="text-slate-500 text-xs">Standard A4 Format • eTIMS Compliant</p>
       </div>
 
-      {/* --- OPTION A: THE TECHNICAL BLUEPRINT --- */}
       <QuotationTemplate mode="view" />
-
-      {/* Action Bar */}
-      <div className="mt-8 flex gap-4">
-         <button className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-slate-800">
-            <Printer size={14} /> Print
-         </button>
-         <button className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-slate-50">
-            <Download size={14} /> PDF
-         </button>
-      </div>
-
     </div>
   );
 };

@@ -13,7 +13,11 @@ export function AuthProvider({ children }) {
     const savedUser = localStorage.getItem('exoin_user');
     
     if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (e) {
+        console.error('Failed to parse cached user:', e);
+      }
     }
     setLoading(false);
   }, []);
@@ -35,6 +39,20 @@ export function AuthProvider({ children }) {
     return transformedUser;
   };
 
+  const updateUser = (userData) => {
+    const savedUser = JSON.parse(localStorage.getItem('exoin_user') || '{}');
+    const updated = {
+      ...savedUser,
+      ...userData,
+      name: (userData.firstName || userData.lastName) 
+        ? `${userData.firstName || savedUser.firstName || ''} ${userData.lastName || savedUser.lastName || ''}`.trim()
+        : (userData.name || savedUser.name),
+    };
+    localStorage.setItem('exoin_user', JSON.stringify(updated));
+    setUser(updated);
+    return updated;
+  };
+
   const logout = () => {
     localStorage.removeItem('exoin_token');
     localStorage.removeItem('exoin_user');
@@ -44,6 +62,7 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     login,
+    updateUser,
     logout,
     loading,
     isAuthenticated: !!user,

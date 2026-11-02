@@ -179,6 +179,25 @@ export async function getDomainById(domainId: string): Promise<any> {
 }
 
 export async function getDomainDNSRecords(domainId: string): Promise<any[]> {
+  const existing = await prisma.domainDNS.findMany({
+    where: { domainId },
+    orderBy: [{ recordType: 'asc' }, { name: 'asc' }]
+  });
+
+  if (existing.length > 0) {
+    return existing;
+  }
+
+  // Auto-generate DNS records if they do not exist yet
+  const domain = await prisma.emailDomain.findUnique({ where: { id: domainId } });
+  if (!domain) return [];
+
+  const { publicKey } = generateDKIMKeys();
+  const verificationCode = domain.verificationCode || generateVerificationCode();
+  const dkimSelector = domain.dkimSelector || 'mail';
+
+  await generateDNSRecords(domainId, domain.domain, verificationCode, dkimSelector, publicKey);
+
   return prisma.domainDNS.findMany({
     where: { domainId },
     orderBy: [{ recordType: 'asc' }, { name: 'asc' }]

@@ -1,0 +1,55 @@
+{
+  "name": "Exoin Workspace",
+  "short_name": "Exoin",
+  "description": "Exoin Africa - Service Job Cards, Invoices, Delivery Notes, Quotations & Documents Portal",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0F172A",
+  "theme_color": "#1E3A8A",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Job Card",
+      "short_name": "Job Card",
+      "description": "Create a service job card with client signature",
+      "url": "/finance?type=job_card",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "New Delivery Note",
+      "short_name": "Delivery Note",
+      "description": "Generate an official delivery note",
+      "url": "/finance?type=delivery_note",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Documents",
+      "short_name": "Documents",
+      "description": "View generated business documents",
+      "url": "/documents",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -335,7 +335,7 @@ const EmailList = ({
   }
 
   return (
-    <div ref={listRef} className="overflow-y-auto h-full">
+    <div ref={listRef} className="overflow-y-auto h-full pb-28 md:pb-4">
       {emails.map((email, index) => (
         <EmailListItem
           key={email.id}

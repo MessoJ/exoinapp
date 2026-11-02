@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { PermissionProvider } from './context/PermissionContext';
 import { ThemeProvider } from './context/ThemeContext';
 import DashboardLayout from './components/layout/DashboardLayout';
 
@@ -161,7 +162,9 @@ function App() {
     <Router>
       <ThemeProvider>
         <AuthProvider>
-          <AppRoutes />
+          <PermissionProvider>
+            <AppRoutes />
+          </PermissionProvider>
         </AuthProvider>
       </ThemeProvider>
     </Router>

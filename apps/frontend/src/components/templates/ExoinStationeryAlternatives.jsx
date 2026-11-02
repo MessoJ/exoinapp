@@ -1,42 +1,13 @@
 import React from 'react';
 import { Phone, Mail, Globe, MapPin, QrCode, Fingerprint, ShieldCheck, Barcode, Lock, Cpu } from 'lucide-react';
+import { Logo } from './Logo';
 
 const ExoinStationeryAlternatives = () => {
   // Option B is the chosen direction
 
   // --- REUSABLE LOGO ---
   const CardLogo = ({ variant = 'dark', scale = 1, iconOnly = false }) => {
-    const isMonochrome = variant === 'monochrome';
-    const fillColor = (variant === 'dark' || isMonochrome) ? '#FFFFFF' : '#1E3A8A';
-    const accentColor = isMonochrome ? '#FFFFFF' : '#F97316';
-    const textColor = (variant === 'dark' || isMonochrome) ? 'text-white' : 'text-slate-900';
-    const lineColor = (variant === 'dark' || isMonochrome) ? 'bg-[#020617]' : 'bg-white';
-    const subTextColor = (variant === 'dark' || isMonochrome) ? 'text-slate-400' : 'text-slate-500';
-
-    return (
-      <div className={`flex items-center ${iconOnly ? 'justify-center' : 'gap-3'}`} style={{ transform: `scale(${scale})` }}>
-        <div className="h-8 w-8 relative flex-shrink-0 drop-shadow-lg">
-          <svg viewBox="0 0 100 100" fill="none" className="w-full h-full">
-            <path d="M15 30 C15 21.7157 21.7157 15 30 15 H55 L55 45 L85 75 H60 C51.7157 75 45 68.2843 45 60 V60 L15 30 Z" fill={fillColor} />
-            <path d="M85 70 C85 78.2843 78.2843 85 70 85 H45 L45 55 L15 25 H40 C48.2843 25 55 31.7157 55 40 V40 L85 70 Z" fill={accentColor} />
-          </svg>
-        </div>
-        {!iconOnly && (
-          <div className="flex flex-col justify-between h-7 py-0.5">
-              <div className="relative leading-none">
-                <h1 className={`text-xl font-black tracking-tighter leading-none m-0 ${textColor}`} style={{ fontFamily: 'sans-serif' }}>
-                    EXOIN
-                </h1>
-                <div className={`absolute top-[75%] left-0 w-full h-[1px] ${lineColor}`}></div>
-              </div>
-              <div className="flex items-center justify-end gap-1">
-                <div className="w-1 h-1 rounded-full bg-orange-500"></div>
-                <span className={`text-[5px] font-bold tracking-[0.4em] uppercase ${subTextColor}`}>AFRICA</span>
-              </div>
-          </div>
-        )}
-      </div>
-    );
+    return <Logo variant={variant === 'light' ? 'default' : variant} scale={scale} iconOnly={iconOnly} />;
   };
 
   return (
@@ -72,9 +43,8 @@ const ExoinStationeryAlternatives = () => {
 
                  <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-1">Jane Doe</h2>
                  
-                 {/* UPDATED: ROLE DISPLAY & STATIC GREEN DOT */}
+                 {/* ROLE DISPLAY & STATIC GREEN DOT */}
                  <div className="flex items-center gap-2">
-                    {/* Green dot represents 'Active Status' in print */}
                     <div className="w-1.5 h-1.5 bg-green-500 rounded-full shadow-[0_0_5px_#22c55e]"></div>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Senior Engineer</p>
                  </div>

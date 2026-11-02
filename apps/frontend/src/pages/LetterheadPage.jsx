@@ -5,7 +5,8 @@ import 'react-quill/dist/quill.snow.css';
 import { 
   Save, Download, Share2, Mail, FileText, PenTool, Edit3, 
   GripVertical, Maximize2, Minimize2, Globe, MapPin, Loader2, 
-  ChevronLeft, ChevronRight, ArrowLeft, Link2, Copy, Check, ExternalLink, X
+  ChevronLeft, ChevronRight, ArrowLeft, Link2, Copy, Check, ExternalLink, X,
+  Eye, Sliders, Sparkles, ZoomIn, ZoomOut, UserCheck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
@@ -13,7 +14,7 @@ import jsPDF from 'jspdf';
 import SignaturePicker from '../components/common/SignaturePicker';
 import useSignatures from '../hooks/useSignatures';
 
-// Page layout constants (A4 proportions scaled)
+// Page layout constants (A4 proportions scaled: 595 x 842 pt)
 const PAGE_CONFIG = {
   width: 595,
   height: 842,
@@ -28,7 +29,7 @@ const PAGE_CONFIG = {
 const FIRST_PAGE_CONTENT_HEIGHT = PAGE_CONFIG.height - PAGE_CONFIG.headerHeight - PAGE_CONFIG.footerHeight - (PAGE_CONFIG.contentPadding * 2);
 const CONTINUATION_PAGE_CONTENT_HEIGHT = PAGE_CONFIG.height - PAGE_CONFIG.continuationHeaderHeight - PAGE_CONFIG.footerHeight - (PAGE_CONFIG.contentPadding * 2);
 
-// Share Modal
+// Apple-style Share Modal
 const ShareModal = ({ isOpen, onClose, documentName }) => {
   const [copied, setCopied] = useState(false);
   const shareUrl = `${window.location.origin}/documents/share/${Math.random().toString(36).substring(7)}`;
@@ -42,33 +43,60 @@ const ShareModal = ({ isOpen, onClose, documentName }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in duration-200">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+      <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/40 w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-slate-900">Share Letterhead</h3>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg">
-            <X size={20} />
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-orange-500/10 text-orange-600 flex items-center justify-center">
+              <Share2 size={18} />
+            </div>
+            <h3 className="text-base font-semibold text-slate-900">Share Letterhead</h3>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors"
+          >
+            <X size={16} />
           </button>
         </div>
         
-        <p className="text-sm text-slate-500 mb-4">
-          Share {documentName || 'this document'} with your recipient
+        <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+          Anyone with this private link can view and download {documentName ? `"${documentName}"` : 'this official letterhead'}.
         </p>
         
-        <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
-          <Link2 size={18} className="text-slate-400 flex-shrink-0" />
-          <input type="text" value={shareUrl} readOnly className="flex-1 bg-transparent text-sm text-slate-600 focus:outline-none truncate" />
-          <button onClick={handleCopy} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${copied ? 'bg-green-500 text-white' : 'bg-orange-500 text-white hover:bg-orange-600'}`}>
-            {copied ? <Check size={16} /> : <Copy size={16} />}
+        <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-2xl border border-slate-200/80 mb-5">
+          <Link2 size={16} className="text-slate-400 ml-2 shrink-0" />
+          <input 
+            type="text" 
+            value={shareUrl} 
+            readOnly 
+            className="flex-1 bg-transparent text-xs text-slate-600 focus:outline-none truncate px-1" 
+          />
+          <button 
+            onClick={handleCopy} 
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all active:scale-95 flex items-center gap-1.5 ${
+              copied 
+                ? 'bg-emerald-600 text-white shadow-sm' 
+                : 'bg-orange-500 text-white hover:bg-orange-600 shadow-sm'
+            }`}
+          >
+            {copied ? <Check size={14} /> : <Copy size={14} />}
+            {copied ? 'Copied' : 'Copy'}
           </button>
         </div>
 
-        <div className="flex gap-3 mt-6">
-          <button onClick={() => window.open(`mailto:?subject=${encodeURIComponent(documentName || 'Document')}&body=${encodeURIComponent(`Please find your document here: ${shareUrl}`)}`, '_blank')} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-200 rounded-lg hover:bg-slate-50">
-            <Mail size={18} /> Email
+        <div className="grid grid-cols-2 gap-3">
+          <button 
+            onClick={() => window.open(`mailto:?subject=${encodeURIComponent(documentName || 'Official Letterhead')}&body=${encodeURIComponent(`Please find your official correspondence here: ${shareUrl}`)}`, '_blank')} 
+            className="flex items-center justify-center gap-2 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-2xl transition-all active:scale-95"
+          >
+            <Mail size={15} /> Send via Mail
           </button>
-          <button onClick={() => window.open(shareUrl, '_blank')} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-200 rounded-lg hover:bg-slate-50">
-            <ExternalLink size={18} /> Preview
+          <button 
+            onClick={() => window.open(shareUrl, '_blank')} 
+            className="flex items-center justify-center gap-2 py-2.5 px-4 bg-slate-900 hover:bg-black text-white text-xs font-semibold rounded-2xl transition-all active:scale-95 shadow-sm"
+          >
+            <ExternalLink size={15} /> Open Preview
           </button>
         </div>
       </div>
@@ -76,25 +104,24 @@ const ShareModal = ({ isOpen, onClose, documentName }) => {
   );
 };
 
-// Footer Component - Same for all pages
+// Footer Component
 const PageFooter = () => (
-  <div className="bg-[#0F172A] text-white px-12 py-4 flex justify-between items-center relative overflow-hidden rounded-t-2xl shrink-0">
-    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
+  <div className="bg-[#0F172A] text-white px-12 py-3.5 flex justify-between items-center relative overflow-hidden rounded-t-2xl shrink-0">
     <div className="relative z-10 flex gap-6 text-[8px] font-mono text-slate-400">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         <Globe size={10} className="text-orange-500"/> www.exoin.africa
       </div>
-      <div className="flex items-center gap-2">
-        <MapPin size={10} className="text-orange-500"/> Nairobi, Kenya
+      <div className="flex items-center gap-1.5">
+        <MapPin size={10} className="text-orange-500"/> Nairobi, Kenya • +254 739 443 244
       </div>
     </div>
-    <div className="relative z-10 h-6 w-6 flex-shrink-0">
+    <div className="relative z-10 h-5 w-5 flex-shrink-0">
       <svg viewBox="0 0 100 100" fill="none" className="w-full h-full">
         <path d="M15 30 C15 21.7157 21.7157 15 30 15 H55 L55 45 L85 75 H60 C51.7157 75 45 68.2843 45 60 V60 L15 30 Z" fill="white" />
         <path d="M85 70 C85 78.2843 78.2843 85 70 85 H45 L45 55 L15 25 H40 C48.2843 25 55 31.7157 55 40 V40 L85 70 Z" fill="white" />
       </svg>
     </div>
-    <div className="relative z-10 text-[10px] font-serif italic text-white tracking-wider opacity-90">
+    <div className="relative z-10 text-[9px] font-serif italic text-white tracking-wider opacity-90">
       Beyond Clean
     </div>
   </div>
@@ -108,33 +135,33 @@ const Watermark = () => (
         <path d="M15 30 C15 21.7157 21.7157 15 30 15 H55 L55 45 L85 75 H60 C51.7157 75 45 68.2843 45 60 V60 L15 30 Z" fill="currentColor" />
         <path d="M85 70 C85 78.2843 78.2843 85 70 85 H45 L45 55 L15 25 H40 C48.2843 25 55 31.7157 55 40 V40 L85 70 Z" fill="currentColor" />
       </svg>
-      <span className="text-3xl font-serif font-bold tracking-widest text-slate-900 uppercase">CONQUEROR</span>
+      <span className="text-3xl font-serif font-bold tracking-widest text-slate-900 uppercase">EXOIN</span>
     </div>
   </div>
 );
 
-// First Page Template (with full header/logo)
+// First Page Template
 const FirstPageTemplate = ({ 
   data, 
   contentHtml, 
   signature, 
   pageNumber, 
-  totalPages,
-  isLastPage,
-  senderName,
-  senderTitle,
-  forExport = false,
-  signatureLabel = 'Authorized Signature'
+  totalPages, 
+  isLastPage, 
+  senderName, 
+  senderTitle, 
+  forExport = false, 
+  signatureLabel = 'Authorized Signature' 
 }) => {
   return (
     <div 
-      className="w-[595px] h-[842px] bg-white shadow-2xl relative flex flex-col overflow-hidden print:shadow-none" 
+      className="w-[595px] h-[842px] bg-white shadow-xl relative flex flex-col overflow-hidden print:shadow-none" 
       id={`letterhead-page-${pageNumber}`}
       data-page={pageNumber}
     >
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/graphy.png')] opacity-[0.02] pointer-events-none"></div>
       
-      {/* Full Header with Logo - ONLY on first page */}
+      {/* Full Header with Logo */}
       <div className="relative z-10 pt-8 px-12 pb-3 shrink-0">
         <div className="flex justify-between items-start">
           <CardLogo variant="light" scale={1.2} forExport={forExport} />
@@ -144,21 +171,21 @@ const FirstPageTemplate = ({
         </div>
       </div>
 
-      {/* Separator Line */}
-      <div className="relative h-4 w-full overflow-hidden shrink-0">
+      {/* Brand Accent Separator */}
+      <div className="relative h-3 w-full overflow-hidden shrink-0">
         <div className="absolute top-1/2 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-orange-500 to-transparent opacity-50"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-[1px] bg-orange-500"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-[1.5px] bg-orange-500"></div>
       </div>
 
       <Watermark />
 
       {/* Body Content */}
-      <div className="flex-1 px-12 py-4 relative z-10 text-slate-800 leading-relaxed overflow-hidden flex flex-col">
-        {data.recipientName && (
-          <div className="text-xs space-y-3 mb-5 shrink-0">
+      <div className="flex-1 px-12 py-3 relative z-10 text-slate-800 leading-relaxed overflow-hidden flex flex-col">
+        {(data.recipientName || data.subject) && (
+          <div className="text-xs space-y-2.5 mb-4 shrink-0">
             <p className="font-semibold text-slate-600">{data.date}</p>
             <div className="space-y-0.5">
-              <p className="font-medium text-slate-900">{data.recipientName}</p>
+              {data.recipientName && <p className="font-semibold text-slate-900">{data.recipientName}</p>}
               {data.company && <p className="text-slate-600">{data.company}</p>}
               {data.address && <p className="text-slate-500">{data.address}</p>}
               {data.city && <p className="text-slate-500">{data.city}</p>}
@@ -177,18 +204,18 @@ const FirstPageTemplate = ({
         />
         
         {isLastPage && (
-          <div className="pt-4 shrink-0">
-            <p className="text-[11px] text-slate-600 mb-3">Yours sincerely,</p>
+          <div className="pt-3 shrink-0">
+            <p className="text-[11px] text-slate-600 mb-2">Yours sincerely,</p>
             {signature ? (
               <div className="mb-1">
-                <img src={signature} alt="Signature" className="h-12 object-contain" />
+                <img src={signature} alt="Signature" className="h-11 object-contain" />
               </div>
             ) : (
-              <div className="h-12 mb-1 border-b border-dashed border-slate-300 w-40"></div>
+              <div className="h-10 mb-1 border-b border-dashed border-slate-300 w-36"></div>
             )}
-            <p className="text-[11px] font-bold text-slate-900">{senderName || 'Your Name'}</p>
-            <p className="text-[10px] text-slate-500">{senderTitle || 'Your Title'}</p>
-            {signatureLabel && <p className="text-[9px] text-slate-400 mt-1 uppercase tracking-wider">{signatureLabel}</p>}
+            <p className="text-[11px] font-bold text-slate-900">{senderName || 'Authorized Signatory'}</p>
+            <p className="text-[10px] text-slate-500">{senderTitle || 'Exoin Africa'}</p>
+            {signatureLabel && <p className="text-[8px] text-slate-400 mt-0.5 uppercase tracking-wider">{signatureLabel}</p>}
           </div>
         )}
       </div>
@@ -199,34 +226,34 @@ const FirstPageTemplate = ({
   );
 };
 
-// Continuation Page Template (minimal header, no logo)
+// Continuation Page Template
 const ContinuationPageTemplate = ({ 
   contentHtml, 
   signature, 
   pageNumber, 
-  totalPages,
-  isLastPage,
-  senderName,
-  senderTitle,
-  forExport = false,
-  signatureLabel = 'Authorized Signature'
+  totalPages, 
+  isLastPage, 
+  senderName, 
+  senderTitle, 
+  forExport = false, 
+  signatureLabel = 'Authorized Signature' 
 }) => {
   return (
     <div 
-      className="w-[595px] h-[842px] bg-white shadow-2xl relative flex flex-col overflow-hidden print:shadow-none" 
+      className="w-[595px] h-[842px] bg-white shadow-xl relative flex flex-col overflow-hidden print:shadow-none" 
       id={`letterhead-page-${pageNumber}`}
       data-page={pageNumber}
     >
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/graphy.png')] opacity-[0.02] pointer-events-none"></div>
       
-      {/* Minimal Header - No logo, just page number */}
+      {/* Minimal Header */}
       <div className="relative z-10 pt-4 px-12 pb-2 shrink-0 flex justify-between items-center border-b border-slate-100">
         <div className="flex items-center gap-2">
-          <svg viewBox="0 0 100 100" fill="none" className="w-5 h-5 opacity-30">
+          <svg viewBox="0 0 100 100" fill="none" className="w-4 h-4 opacity-30">
             <path d="M15 30 C15 21.7157 21.7157 15 30 15 H55 L55 45 L85 75 H60 C51.7157 75 45 68.2843 45 60 V60 L15 30 Z" fill="currentColor" />
             <path d="M85 70 C85 78.2843 78.2843 85 70 85 H45 L45 55 L15 25 H40 C48.2843 25 55 31.7157 55 40 V40 L85 70 Z" fill="currentColor" />
           </svg>
-          <span className="text-[9px] font-mono text-slate-300 uppercase tracking-widest">Exoin Africa</span>
+          <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest">Exoin Africa</span>
         </div>
         <div className="text-[9px] font-mono text-slate-400">
           pg {pageNumber} of {totalPages}
@@ -235,25 +262,25 @@ const ContinuationPageTemplate = ({
 
       <Watermark />
 
-      <div className="flex-1 px-12 py-6 relative z-10 text-slate-800 leading-relaxed overflow-hidden flex flex-col">
+      <div className="flex-1 px-12 py-5 relative z-10 text-slate-800 leading-relaxed overflow-hidden flex flex-col">
         <div 
           className="letterhead-content text-[11px] flex-1 overflow-hidden"
           dangerouslySetInnerHTML={{ __html: contentHtml || '' }} 
         />
         
         {isLastPage && (
-          <div className="pt-4 shrink-0">
-            <p className="text-[11px] text-slate-600 mb-3">Yours sincerely,</p>
+          <div className="pt-3 shrink-0">
+            <p className="text-[11px] text-slate-600 mb-2">Yours sincerely,</p>
             {signature ? (
               <div className="mb-1">
-                <img src={signature} alt="Signature" className="h-12 object-contain" />
+                <img src={signature} alt="Signature" className="h-11 object-contain" />
               </div>
             ) : (
-              <div className="h-12 mb-1 border-b border-dashed border-slate-300 w-40"></div>
+              <div className="h-10 mb-1 border-b border-dashed border-slate-300 w-36"></div>
             )}
-            <p className="text-[11px] font-bold text-slate-900">{senderName || 'Your Name'}</p>
-            <p className="text-[10px] text-slate-500">{senderTitle || 'Your Title'}</p>
-            {signatureLabel && <p className="text-[9px] text-slate-400 mt-1 uppercase tracking-wider">{signatureLabel}</p>}
+            <p className="text-[11px] font-bold text-slate-900">{senderName || 'Authorized Signatory'}</p>
+            <p className="text-[10px] text-slate-500">{senderTitle || 'Exoin Africa'}</p>
+            {signatureLabel && <p className="text-[8px] text-slate-400 mt-0.5 uppercase tracking-wider">{signatureLabel}</p>}
           </div>
         )}
       </div>
@@ -264,57 +291,80 @@ const ContinuationPageTemplate = ({
   );
 };
 
-// Enhanced Quill modules
+// Quill formatting
 const QUILL_MODULES = {
   toolbar: {
     container: [
       [{ 'header': [1, 2, 3, false] }],
-      [{ 'font': [] }],
-      [{ 'size': ['small', false, 'large', 'huge'] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'color': [] }, { 'background': [] }],
+      ['bold', 'italic', 'underline'],
+      [{ 'color': [] }],
       [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-      [{ 'indent': '-1' }, { 'indent': '+1' }],
       [{ 'align': [] }],
-      ['blockquote'],
-      ['link'],
-      ['clean']
+      ['blockquote', 'clean']
     ],
   },
   clipboard: { matchVisual: false },
 };
 
 const QUILL_FORMATS = [
-  'header', 'font', 'size', 'bold', 'italic', 'underline', 'strike',
-  'color', 'background', 'list', 'bullet', 'indent', 'align', 'blockquote', 'link'
+  'header', 'bold', 'italic', 'underline',
+  'color', 'list', 'bullet', 'align', 'blockquote'
 ];
 
 const LetterheadPage = () => {
   const navigate = useNavigate();
   const { getDefaultSignature } = useSignatures();
   
+  // Mobile tab switcher: 'editor' or 'preview'
+  const [mobileTab, setMobileTab] = useState('editor');
+  const [zoomScale, setZoomScale] = useState(1);
+  const [autoScale, setAutoScale] = useState(1);
+
   const [formData, setFormData] = useState({
     date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
     recipientName: '',
     company: '',
     address: '',
-    city: '',
+    city: 'Nairobi, Kenya',
     subject: ''
   });
-  const [content, setContent] = useState('<p>Dear Valued Partner,</p><p><br></p><p>We are pleased to present this correspondence regarding our continued partnership and commitment to excellence in service delivery.</p><p><br></p><p>At Exoin Africa, we believe in building lasting relationships through transparent communication and exceptional service quality. Our team remains dedicated to exceeding your expectations and providing innovative solutions tailored to your specific needs.</p><p><br></p><p>Please do not hesitate to contact us should you have any questions or require further information. We look forward to continuing our successful collaboration.</p>');
+  
+  const [content, setContent] = useState(
+    '<p>Dear Valued Partner,</p><p><br></p><p>We are pleased to present this correspondence regarding our continued partnership and commitment to excellence in service delivery.</p><p><br></p><p>At Exoin Africa, we deliver autonomous hygiene, pest control, and facility care solutions engineered to the highest professional standards. Our dedicated field technicians and operations team ensure every requirement is met with accuracy, accountability, and speed.</p><p><br></p><p>Please do not hesitate to contact our office should you have any questions or require further information. We look forward to continuing our successful collaboration.</p>'
+  );
+  
   const [signature, setSignature] = useState(null);
-  const [senderName, setSenderName] = useState('');
-  const [senderTitle, setSenderTitle] = useState('');
+  const [senderName, setSenderName] = useState('Francis Meso');
+  const [senderTitle, setSenderTitle] = useState('Managing Director');
   const [signatureLabel, setSignatureLabel] = useState('Authorized Signature');
-  const [editorWidth, setEditorWidth] = useState(50);
-  const [isResizing, setIsResizing] = useState(false);
+  
   const [downloading, setDownloading] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showRecipientDetails, setShowRecipientDetails] = useState(false);
   const [currentPreviewPage, setCurrentPreviewPage] = useState(1);
-  
+
   const containerRef = useRef(null);
   const previewRef = useRef(null);
   const quillRef = useRef(null);
+
+  // Dynamic mobile scale calculation
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 768) {
+        // Mobile screen auto-scaling
+        const scale = Math.min(1, Math.max(0.46, (width - 32) / 595));
+        setAutoScale(scale);
+        setZoomScale(scale);
+      } else {
+        setAutoScale(1);
+        setZoomScale(1);
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const defaultSig = getDefaultSignature();
@@ -323,7 +373,15 @@ const LetterheadPage = () => {
     }
   }, []);
 
-  // Advanced content splitting with proper overflow detection
+  const handleUpdate = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSignatureSelect = (sig) => {
+    setSignature(sig?.dataUrl || null);
+  };
+
+  // Content splitting logic
   const splitContentIntoPages = useCallback((htmlContent) => {
     if (!htmlContent || htmlContent === '<p><br></p>') return [''];
     
@@ -340,14 +398,13 @@ const LetterheadPage = () => {
     document.body.appendChild(tempContainer);
     
     const blocks = Array.from(tempContainer.children);
-    
     if (blocks.length === 0) {
       document.body.removeChild(tempContainer);
       return [htmlContent];
     }
     
-    const recipientInfoHeight = formData.recipientName ? 120 : 0;
-    const signatureHeight = 100;
+    const recipientInfoHeight = formData.recipientName ? 100 : 0;
+    const signatureHeight = 85;
     const firstPageAvailable = FIRST_PAGE_CONTENT_HEIGHT - recipientInfoHeight - signatureHeight;
     const continuationPageAvailable = CONTINUATION_PAGE_CONTENT_HEIGHT - signatureHeight;
     
@@ -358,10 +415,10 @@ const LetterheadPage = () => {
     
     for (let i = 0; i < blocks.length; i++) {
       const block = blocks[i];
-      const blockHeight = block.offsetHeight + 10;
-      const maxHeight = isFirstPage ? firstPageAvailable : continuationPageAvailable;
+      const blockHeight = block.offsetHeight || 22;
+      const availableHeight = isFirstPage ? firstPageAvailable : continuationPageAvailable;
       
-      if (currentHeight + blockHeight > maxHeight && currentPageContent) {
+      if (currentHeight + blockHeight > availableHeight && currentPageContent !== '') {
         pages.push(currentPageContent);
         currentPageContent = block.outerHTML;
         currentHeight = blockHeight;
@@ -380,124 +437,38 @@ const LetterheadPage = () => {
     return pages.length > 0 ? pages : [htmlContent];
   }, [formData.recipientName]);
 
-  const contentPages = useMemo(() => splitContentIntoPages(content), [content, splitContentIntoPages]);
+  const contentPages = useMemo(() => {
+    return splitContentIntoPages(content);
+  }, [content, splitContentIntoPages]);
+
   const totalPages = contentPages.length;
-
-  const handleUpdate = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSignatureSelect = (signatureDataUrl) => {
-    setSignature(signatureDataUrl);
-  };
-
-  const handleMouseMove = useCallback((e) => {
-    if (!isResizing || !containerRef.current) return;
-    const containerRect = containerRef.current.getBoundingClientRect();
-    const newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
-    setEditorWidth(Math.min(70, Math.max(30, newWidth)));
-  }, [isResizing]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsResizing(false);
-  }, []);
-
-  useEffect(() => {
-    if (isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [isResizing, handleMouseMove, handleMouseUp]);
 
   const handleDownloadPDF = async () => {
     setDownloading(true);
     try {
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'pt',
+        format: 'a4',
+      });
       
-      // Create a temporary container for export rendering
-      const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.top = '0';
-      tempContainer.style.zIndex = '-1';
-      tempContainer.style.backgroundColor = '#ffffff';
-      document.body.appendChild(tempContainer);
-
       for (let i = 0; i < totalPages; i++) {
-        const pageContent = contentPages[i];
-        const isFirst = i === 0;
-        const isLast = i === totalPages - 1;
+        const pageEl = document.getElementById(`letterhead-page-${i + 1}`);
+        if (!pageEl) continue;
         
-        // Create a temporary div for this page
-        const pageDiv = document.createElement('div');
-        pageDiv.style.width = '595px';
-        pageDiv.style.height = '842px';
-        pageDiv.style.backgroundColor = '#ffffff';
-        tempContainer.appendChild(pageDiv);
-
-        // Render the component with forExport=true
-        const { createRoot } = await import('react-dom/client');
-        const root = createRoot(pageDiv);
-        
-        await new Promise((resolve) => {
-          if (isFirst) {
-            root.render(
-              <FirstPageTemplate 
-                data={formData} 
-                contentHtml={pageContent} 
-                signature={signature}
-                pageNumber={i + 1} 
-                totalPages={totalPages} 
-                isLastPage={isLast} 
-                senderName={senderName} 
-                senderTitle={senderTitle}
-                forExport={true}
-                signatureLabel={signatureLabel}
-              />
-            );
-          } else {
-            root.render(
-              <ContinuationPageTemplate 
-                contentHtml={pageContent} 
-                signature={signature}
-                pageNumber={i + 1} 
-                totalPages={totalPages} 
-                isLastPage={isLast} 
-                senderName={senderName} 
-                senderTitle={senderTitle}
-                forExport={true}
-                signatureLabel={signatureLabel}
-              />
-            );
-          }
-          setTimeout(resolve, 1000); // Wait for render
-        });
-
-        const canvas = await html2canvas(pageDiv, { 
-          scale: 2.5, useCORS: true, logging: false, backgroundColor: '#ffffff',
-          windowWidth: 595, windowHeight: 842
+        const canvas = await html2canvas(pageEl, {
+          scale: 2.5,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
         });
         
-        const imgData = canvas.toDataURL('image/png', 1.0);
-        if (i > 0) pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
-
-        // Cleanup
-        root.unmount();
-        tempContainer.removeChild(pageDiv);
+        const imgData = canvas.toDataURL('image/png');
+        if (i > 0) pdf.addPage('a4', 'portrait');
+        pdf.addImage(imgData, 'PNG', 0, 0, 595.28, 841.89);
       }
       
-      // Cleanup temp container
-      document.body.removeChild(tempContainer);
-
-      const filename = formData.recipientName 
-        ? `Letterhead-${formData.recipientName.replace(/\s+/g, '_')}.pdf`
-        : `Letterhead-${new Date().toISOString().split('T')[0]}.pdf`;
-      
+      const filename = `Exoin_Letterhead_${formData.subject ? formData.subject.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 25) : 'Official'}.pdf`;
       pdf.save(filename);
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -515,170 +486,315 @@ const LetterheadPage = () => {
     const drafts = JSON.parse(localStorage.getItem('exoin_letterhead_drafts') || '[]');
     drafts.unshift(letterheadData);
     localStorage.setItem('exoin_letterhead_drafts', JSON.stringify(drafts.slice(0, 10)));
-    alert('Letterhead saved to drafts!');
-  };
-
-  const handleSendEmail = () => {
-    navigate('/mail?compose=true');
-  };
-
-  const goToNextPage = () => {
-    if (currentPreviewPage < totalPages) {
-      setCurrentPreviewPage(prev => prev + 1);
-      const pageEl = document.getElementById(`letterhead-page-${currentPreviewPage + 1}`);
-      pageEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
-
-  const goToPrevPage = () => {
-    if (currentPreviewPage > 1) {
-      setCurrentPreviewPage(prev => prev - 1);
-      const pageEl = document.getElementById(`letterhead-page-${currentPreviewPage - 1}`);
-      pageEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    alert('Letterhead saved to drafts successfully!');
   };
 
   return (
-    <div className="flex flex-col h-screen bg-slate-100 overflow-hidden">
-      {/* Top Bar */}
-      <div className="bg-white border-b border-slate-200 px-6 py-3 flex justify-between items-center shrink-0 z-20">
+    <div className="flex flex-col h-full bg-[#F8FAFC] overflow-hidden antialiased text-slate-800">
+      {/* Frosted Glass Top Navigation Bar */}
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 px-4 md:px-6 py-3 flex items-center justify-between gap-3 shadow-xs">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors">
-            <ArrowLeft size={18} />
+          <button 
+            onClick={() => navigate(-1)} 
+            className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200/80 text-slate-600 flex items-center justify-center transition-all active:scale-95"
+            title="Go back"
+          >
+            <ArrowLeft size={17} />
           </button>
-          <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
-            <FileText className="text-white" size={20} />
+          
+          <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white shadow-sm shadow-orange-500/25">
+            <FileText size={18} />
           </div>
+          
           <div>
-            <h1 className="text-lg font-bold text-slate-900">Letterhead Editor</h1>
-            <p className="text-xs text-slate-500">
-              Official Correspondence 
-              {totalPages > 1 && <span className="ml-1 text-orange-600 font-medium">• {totalPages} pages</span>}
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-1">
-          <SignaturePicker onSelect={handleSignatureSelect} currentSignature={signature} compact />
-          <div className="h-5 w-px bg-slate-200 mx-2"></div>
-          <button onClick={handleSave} className="p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Save Draft">
-            <Save size={18} />
-          </button>
-          <button onClick={handleDownloadPDF} disabled={downloading} className="p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50" title="Download PDF">
-            {downloading ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-          </button>
-          <button onClick={() => setShowShareModal(true)} className="p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Share">
-            <Share2 size={18} />
-          </button>
-          <button onClick={handleSendEmail} className="ml-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors shadow-sm flex items-center gap-2 text-sm font-medium" title="Send via Email">
-            <Mail size={16} /> Send
-          </button>
-        </div>
-      </div>
-
-      {/* Document Details Bar */}
-      <div className="bg-white border-b border-slate-200 px-6 py-3 shrink-0">
-        <div className="grid grid-cols-7 gap-4">
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date</label>
-            <input type="text" value={formData.date} onChange={(e) => handleUpdate('date', e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none px-3 py-1.5 text-sm text-slate-900 rounded-lg transition-colors" />
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Recipient</label>
-            <input type="text" value={formData.recipientName} onChange={(e) => handleUpdate('recipientName', e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none px-3 py-1.5 text-sm text-slate-900 rounded-lg transition-colors" placeholder="Recipient name" />
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Company</label>
-            <input type="text" value={formData.company} onChange={(e) => handleUpdate('company', e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none px-3 py-1.5 text-sm text-slate-900 rounded-lg transition-colors" placeholder="Company name" />
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Subject</label>
-            <input type="text" value={formData.subject} onChange={(e) => handleUpdate('subject', e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none px-3 py-1.5 text-sm text-slate-900 rounded-lg transition-colors" placeholder="Letter subject" />
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Your Name</label>
-            <input type="text" value={senderName} onChange={(e) => setSenderName(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none px-3 py-1.5 text-sm text-slate-900 rounded-lg transition-colors" placeholder="Your full name" />
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Your Title</label>
-            <input type="text" value={senderTitle} onChange={(e) => setSenderTitle(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none px-3 py-1.5 text-sm text-slate-900 rounded-lg transition-colors" placeholder="Job title" />
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Sig. Label</label>
-            <input type="text" value={signatureLabel} onChange={(e) => setSignatureLabel(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none px-3 py-1.5 text-sm text-slate-900 rounded-lg transition-colors" placeholder="e.g. Authorized Signature" />
-          </div>
-        </div>
-      </div>
-
-      {/* Main Split View */}
-      <div ref={containerRef} className="flex-1 flex overflow-hidden">
-        {/* Left: Enhanced Editor */}
-        <div className="bg-white border-r border-slate-200 flex flex-col" style={{ width: `${editorWidth}%` }}>
-          <div className="p-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-              <Edit3 size={14} className="text-orange-500" /> Content Editor
-            </span>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-400">{content.replace(/<[^>]*>/g, '').length} chars</span>
-              <button onClick={() => setEditorWidth(editorWidth < 50 ? 60 : 40)} className="p-1.5 hover:bg-slate-200 rounded text-slate-400 transition-colors" title={editorWidth < 50 ? 'Expand Editor' : 'Shrink Editor'}>
-                {editorWidth < 50 ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
-              </button>
+              <h1 className="text-sm md:text-base font-bold text-slate-900 tracking-tight">Official Letterhead</h1>
+              <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-200/50">
+                {totalPages} {totalPages === 1 ? 'Page' : 'Pages'}
+              </span>
             </div>
-          </div>
-          <div className="flex-1 overflow-hidden">
-            <ReactQuill ref={quillRef} theme="snow" value={content} onChange={setContent}
-              className="h-full flex flex-col letterhead-quill" placeholder="Start typing your letter content here..."
-              modules={QUILL_MODULES} formats={QUILL_FORMATS} />
+            <p className="text-[11px] text-slate-400 hidden sm:block">Standard Exoin Africa Corporate Stationery</p>
           </div>
         </div>
 
-        {/* Resize Handle */}
-        <div className="w-1.5 bg-slate-200 hover:bg-orange-400 cursor-col-resize flex items-center justify-center transition-colors group" onMouseDown={() => setIsResizing(true)}>
-          <GripVertical size={10} className="text-slate-400 group-hover:text-white transition-colors" />
+        {/* Mobile View Segmented Switcher */}
+        <div className="flex md:hidden bg-slate-100 p-1 rounded-2xl border border-slate-200/60">
+          <button
+            onClick={() => setMobileTab('editor')}
+            className={`px-3 py-1 text-xs font-semibold rounded-xl transition-all ${
+              mobileTab === 'editor'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Editor
+          </button>
+          <button
+            onClick={() => setMobileTab('preview')}
+            className={`px-3 py-1 text-xs font-semibold rounded-xl transition-all ${
+              mobileTab === 'preview'
+                ? 'bg-white text-orange-600 shadow-xs'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Preview
+          </button>
         </div>
 
-        {/* Right: Preview */}
-        <div ref={previewRef} className="bg-slate-300 p-6 overflow-y-auto flex flex-col items-center" style={{ width: `${100 - editorWidth - 0.5}%` }}>
-          {totalPages > 1 && (
-            <div className="mb-4 flex items-center gap-3 bg-white rounded-full px-4 py-2 shadow-md">
-              <button onClick={goToPrevPage} disabled={currentPreviewPage === 1} className="p-1 hover:bg-slate-100 rounded-full disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-                <ChevronLeft size={18} />
+        {/* Action Controls */}
+        <div className="flex items-center gap-2">
+          <div className="hidden sm:block">
+            <SignaturePicker onSelect={handleSignatureSelect} currentSignature={signature} compact />
+          </div>
+          
+          <button 
+            onClick={handleSave} 
+            className="w-9 h-9 rounded-2xl bg-slate-100 hover:bg-slate-200/80 text-slate-600 flex items-center justify-center transition-all active:scale-95" 
+            title="Save to Drafts"
+          >
+            <Save size={16} />
+          </button>
+          
+          <button 
+            onClick={() => setShowShareModal(true)} 
+            className="w-9 h-9 rounded-2xl bg-slate-100 hover:bg-slate-200/80 text-slate-600 flex items-center justify-center transition-all active:scale-95" 
+            title="Share Document"
+          >
+            <Share2 size={16} />
+          </button>
+          
+          <button 
+            onClick={handleDownloadPDF} 
+            disabled={downloading} 
+            className="px-3.5 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-2xl text-xs font-semibold flex items-center gap-1.5 shadow-sm shadow-orange-500/20 transition-all active:scale-95 disabled:opacity-50"
+          >
+            {downloading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+            <span className="hidden sm:inline">PDF</span>
+          </button>
+        </div>
+      </header>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Side: Inputs & Rich Text Editor */}
+        <div 
+          className={`flex-1 flex flex-col overflow-y-auto bg-slate-50/50 p-4 md:p-6 border-r border-slate-200/60 ${
+            mobileTab === 'preview' ? 'hidden md:flex' : 'flex'
+          }`}
+        >
+          <div className="max-w-2xl mx-auto w-full space-y-4">
+            
+            {/* Collapsible Recipient Details Card */}
+            <div className="bg-white rounded-3xl p-4 shadow-xs border border-slate-200/60 transition-all">
+              <div 
+                className="flex items-center justify-between cursor-pointer"
+                onClick={() => setShowRecipientDetails(!showRecipientDetails)}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
+                    <Sliders size={15} />
+                  </div>
+                  <div>
+                    <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                      Recipient & Signatory Coordinates
+                    </h2>
+                    <p className="text-[11px] text-slate-400">
+                      {formData.recipientName ? `${formData.recipientName} • ${formData.subject || 'Letter'}` : 'Tap to customize recipient, date & sign-off'}
+                    </p>
+                  </div>
+                </div>
+                <button className="text-xs text-orange-600 font-semibold px-2 py-1 rounded-lg hover:bg-orange-50">
+                  {showRecipientDetails ? 'Collapse' : 'Edit'}
+                </button>
+              </div>
+
+              {showRecipientDetails && (
+                <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-3 animate-in fade-in duration-200">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date</label>
+                    <input 
+                      type="text" 
+                      value={formData.date} 
+                      onChange={(e) => handleUpdate('date', e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:border-orange-500 focus:outline-none transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Subject</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Service Proposal / Quarterly Report" 
+                      value={formData.subject} 
+                      onChange={(e) => handleUpdate('subject', e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:border-orange-500 focus:outline-none transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Recipient Name</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. John Kamau" 
+                      value={formData.recipientName} 
+                      onChange={(e) => handleUpdate('recipientName', e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:border-orange-500 focus:outline-none transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Organization / Company</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Safaricom PLC" 
+                      value={formData.company} 
+                      onChange={(e) => handleUpdate('company', e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:border-orange-500 focus:outline-none transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Signatory Name</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Francis Meso" 
+                      value={senderName} 
+                      onChange={(e) => setSenderName(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:border-orange-500 focus:outline-none transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Signatory Role</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Managing Director" 
+                      value={senderTitle} 
+                      onChange={(e) => setSenderTitle(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs text-slate-800 focus:bg-white focus:border-orange-500 focus:outline-none transition-all"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Apple Styled Quill Editor Box */}
+            <div className="bg-white rounded-3xl shadow-xs border border-slate-200/60 overflow-hidden flex flex-col flex-1 min-h-[460px]">
+              <div className="px-4 py-3 bg-slate-50/80 border-b border-slate-200/60 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Edit3 size={15} className="text-orange-500" />
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Letter Content</span>
+                </div>
+                <span className="text-[11px] font-mono text-slate-400">
+                  {content.replace(/<[^>]*>/g, '').length} characters
+                </span>
+              </div>
+
+              <div className="flex-1 p-2">
+                <ReactQuill 
+                  ref={quillRef} 
+                  theme="snow" 
+                  value={content} 
+                  onChange={setContent}
+                  className="h-[380px] flex flex-col letterhead-quill" 
+                  placeholder="Draft your official corporate letter here..."
+                  modules={QUILL_MODULES} 
+                  formats={QUILL_FORMATS} 
+                />
+              </div>
+            </div>
+
+            {/* Mobile Signature Picker Button */}
+            <div className="sm:hidden bg-white rounded-3xl p-4 shadow-xs border border-slate-200/60">
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Attached Signature</label>
+              <SignaturePicker onSelect={handleSignatureSelect} currentSignature={signature} />
+            </div>
+
+          </div>
+        </div>
+
+        {/* Right Side: Live A4 Visual Preview */}
+        <div 
+          ref={previewRef}
+          className={`flex-1 bg-slate-100/80 p-4 md:p-8 overflow-y-auto flex flex-col items-center ${
+            mobileTab === 'editor' ? 'hidden md:flex' : 'flex'
+          }`}
+        >
+          {/* Zoom & Page Bar */}
+          <div className="mb-6 flex items-center justify-between gap-3 w-full max-w-[595px] px-2">
+            <div className="flex items-center gap-2 bg-white/90 backdrop-blur-md rounded-2xl px-3 py-1.5 shadow-xs border border-slate-200/60 text-xs text-slate-600">
+              <span className="font-semibold text-slate-800">A4 Preview</span>
+              <span className="text-slate-300">•</span>
+              <span>{totalPages} {totalPages === 1 ? 'Page' : 'Pages'}</span>
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-white/90 backdrop-blur-md rounded-2xl p-1 shadow-xs border border-slate-200/60">
+              <button 
+                onClick={() => setZoomScale(s => Math.max(0.4, Number((s - 0.1).toFixed(2))))} 
+                className="w-7 h-7 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-600 active:scale-95"
+                title="Zoom Out"
+              >
+                <ZoomOut size={15} />
               </button>
-              <span className="text-sm font-medium text-slate-700 min-w-[80px] text-center">Page {currentPreviewPage} / {totalPages}</span>
-              <button onClick={goToNextPage} disabled={currentPreviewPage === totalPages} className="p-1 hover:bg-slate-100 rounded-full disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-                <ChevronRight size={18} />
+              <button 
+                onClick={() => setZoomScale(autoScale)} 
+                className="px-2 text-[11px] font-semibold text-slate-700 hover:text-orange-600"
+                title="Reset Fit"
+              >
+                {Math.round(zoomScale * 100)}%
+              </button>
+              <button 
+                onClick={() => setZoomScale(s => Math.min(1.4, Number((s + 0.1).toFixed(2))))} 
+                className="w-7 h-7 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-600 active:scale-95"
+                title="Zoom In"
+              >
+                <ZoomIn size={15} />
               </button>
             </div>
-          )}
-
-          <div className="mb-4 text-[10px] text-slate-500 flex items-center gap-4">
-            <span className="bg-white/80 px-2 py-1 rounded">A4 Format</span>
-            <span className="bg-white/80 px-2 py-1 rounded">{totalPages === 1 ? 'Single Page' : `${totalPages} Pages`}</span>
           </div>
 
-          <div className="space-y-8">
+          {/* Scaled Render Container */}
+          <div className="flex flex-col items-center gap-8 w-full">
             {contentPages.map((pageContent, i) => {
               const isFirst = i === 0;
               const isLast = i === contentPages.length - 1;
               
-              if (isFirst) {
-                return (
-                  <FirstPageTemplate key={i} data={formData} contentHtml={pageContent} signature={signature}
-                    pageNumber={i + 1} totalPages={totalPages} isLastPage={isLast} senderName={senderName} senderTitle={senderTitle} signatureLabel={signatureLabel} />
-                );
-              } else {
-                return (
-                  <ContinuationPageTemplate key={i} contentHtml={pageContent} signature={signature}
-                    pageNumber={i + 1} totalPages={totalPages} isLastPage={isLast} senderName={senderName} senderTitle={senderTitle} signatureLabel={signatureLabel} />
-                );
-              }
+              return (
+                <div 
+                  key={i}
+                  style={{
+                    transform: `scale(${zoomScale})`,
+                    transformOrigin: 'top center',
+                    marginBottom: zoomScale < 1 ? `${(1 - zoomScale) * -842}px` : '0px'
+                  }}
+                  className="transition-transform duration-200"
+                >
+                  {isFirst ? (
+                    <FirstPageTemplate 
+                      data={formData} 
+                      contentHtml={pageContent} 
+                      signature={signature}
+                      pageNumber={i + 1} 
+                      totalPages={totalPages} 
+                      isLastPage={isLast} 
+                      senderName={senderName} 
+                      senderTitle={senderTitle} 
+                      signatureLabel={signatureLabel} 
+                    />
+                  ) : (
+                    <ContinuationPageTemplate 
+                      contentHtml={pageContent} 
+                      signature={signature}
+                      pageNumber={i + 1} 
+                      totalPages={totalPages} 
+                      isLastPage={isLast} 
+                      senderName={senderName} 
+                      senderTitle={senderTitle} 
+                      signatureLabel={signatureLabel} 
+                    />
+                  )}
+                </div>
+              );
             })}
           </div>
         </div>
@@ -688,28 +804,15 @@ const LetterheadPage = () => {
       <ShareModal 
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
-        documentName={formData.subject || 'Letterhead'}
+        documentName={formData.subject || 'Official Letterhead'}
       />
 
-      {/* Enhanced Custom Styles */}
+      {/* Custom Scoped Styles */}
       <style>{`
-        .letterhead-quill { display: flex; flex-direction: column; height: 100%; }
-        .letterhead-quill .ql-toolbar { border: none; border-bottom: 1px solid #e2e8f0; background: #f8fafc; padding: 8px 12px; flex-wrap: wrap; }
-        .letterhead-quill .ql-toolbar .ql-formats { margin-right: 12px; }
-        .letterhead-quill .ql-toolbar button { width: 28px; height: 28px; padding: 4px; }
-        .letterhead-quill .ql-toolbar button:hover { background: #e2e8f0; border-radius: 4px; }
-        .letterhead-quill .ql-toolbar button.ql-active { background: #fed7aa; border-radius: 4px; }
-        .letterhead-quill .ql-container { flex: 1; overflow-y: auto; border: none; font-family: 'Inter', system-ui, sans-serif; }
-        .letterhead-quill .ql-editor { min-height: 100%; font-size: 14px; line-height: 1.8; padding: 24px 32px; color: #1e293b; }
-        .letterhead-quill .ql-editor.ql-blank::before { color: #94a3b8; font-style: normal; left: 32px; }
-        .letterhead-quill .ql-editor p { margin-bottom: 1em; }
-        .letterhead-quill .ql-editor h1 { font-size: 1.5em; font-weight: 700; margin-bottom: 0.5em; }
-        .letterhead-quill .ql-editor h2 { font-size: 1.25em; font-weight: 600; margin-bottom: 0.5em; }
-        .letterhead-quill .ql-editor h3 { font-size: 1.1em; font-weight: 600; margin-bottom: 0.5em; }
-        .letterhead-quill .ql-editor ul, .letterhead-quill .ql-editor ol { padding-left: 1.5em; margin-bottom: 1em; }
-        .letterhead-quill .ql-editor li { margin-bottom: 0.25em; }
-        .letterhead-quill .ql-editor blockquote { border-left: 3px solid #f97316; padding-left: 1em; margin: 1em 0; color: #64748b; font-style: italic; }
-        
+        .letterhead-quill { display: flex; flex-direction: column; }
+        .letterhead-quill .ql-toolbar { border: none !important; border-bottom: 1px solid #e2e8f0 !important; background: transparent; padding: 8px 12px; }
+        .letterhead-quill .ql-container { flex: 1; border: none !important; font-family: 'Inter', system-ui, sans-serif; }
+        .letterhead-quill .ql-editor { font-size: 14px; line-height: 1.8; padding: 16px 20px; color: #1e293b; min-height: 300px; }
         .letterhead-content { font-family: 'Inter', system-ui, sans-serif; line-height: 1.6; color: #334155; }
         .letterhead-content p { margin-bottom: 0.75em; }
         .letterhead-content h1 { font-size: 1.3em; font-weight: 700; margin-bottom: 0.5em; color: #0f172a; }
@@ -718,19 +821,9 @@ const LetterheadPage = () => {
         .letterhead-content ul, .letterhead-content ol { padding-left: 1.5em; margin-bottom: 0.75em; }
         .letterhead-content li { margin-bottom: 0.25em; }
         .letterhead-content blockquote { border-left: 2px solid #f97316; padding-left: 0.75em; margin: 0.75em 0; color: #64748b; font-style: italic; }
-        .letterhead-content strong { font-weight: 600; color: #0f172a; }
-        .letterhead-content em { font-style: italic; }
-        .letterhead-content u { text-decoration: underline; }
-        .letterhead-content a { color: #f97316; text-decoration: underline; }
-        
-        @media print {
-          .shadow-2xl { box-shadow: none !important; }
-          [id^="letterhead-page-"] { page-break-after: always; page-break-inside: avoid; }
-        }
       `}</style>
     </div>
   );
 };
 
 export default LetterheadPage;
-

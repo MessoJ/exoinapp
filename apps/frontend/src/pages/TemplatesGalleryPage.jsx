@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   FileEdit, Receipt, FileSpreadsheet, CreditCard, Mail, Palette, 
-  Building2, Laptop, Gift, BookOpen, LayoutGrid, ArrowRight,
+  Building2, Laptop, Gift, BookOpen, LayoutGrid, ArrowRight, Truck,
   Search, Filter, ChevronRight, Eye, Edit3, Plus
 } from 'lucide-react';
 
@@ -41,6 +41,24 @@ const TEMPLATE_CATEGORIES = [
         editorPath: '/editor/quotation',
         previewPath: '/templates/quotations',
         features: ['Scope section', 'Line items', 'Validity period', 'Terms & conditions'],
+      },
+      {
+        id: 'delivery-note',
+        title: 'Delivery Note',
+        description: 'Official delivery documentation with ordered vs delivered quantities and dual sign-off',
+        preview: '/templates/delivery-note-preview.png',
+        editorPath: '/finance?type=delivery_note',
+        previewPath: '/finance?type=delivery_note',
+        features: ['Quantity tracking', 'Order/LPO ref', 'Dual signatures & stamp', 'Goods receipt terms'],
+      },
+      {
+        id: 'job-card',
+        title: 'Service Job Card',
+        description: 'Fumigation, pest control, and on-site service completion sheet with official security seal and client sign-off',
+        preview: '/templates/jobcard-preview.png',
+        editorPath: '/finance?type=job_card',
+        previewPath: '/finance?type=job_card',
+        features: ['Target pests & chemicals', 'Safety & re-entry advisory', 'Official security seal', 'Technician & client sign-off'],
       },
     ],
   },

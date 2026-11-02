@@ -17,7 +17,9 @@ import {
   Edit,
   FileEdit,
   CreditCard,
-  ChevronDown
+  ChevronDown,
+  Truck,
+  ClipboardCheck
 } from 'lucide-react';
 
 const DocumentsPage = () => {
@@ -122,12 +124,12 @@ const DocumentsPage = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-28 sm:pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Documents</h1>
-          <p className="text-slate-500">Manage your invoices, quotations, and letterheads</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Documents</h1>
+          <p className="text-xs sm:text-sm text-slate-500">Manage your invoices, quotations, delivery notes & job cards</p>
         </div>
         
         {/* Create New Dropdown */}
@@ -192,6 +194,34 @@ const DocumentsPage = () => {
                 </Link>
                 
                 <Link 
+                  to="/finance?type=delivery_note"
+                  onClick={() => setShowCreateDropdown(false)}
+                  className="flex items-center gap-3 px-3 py-3 hover:bg-slate-50 transition-colors"
+                >
+                  <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                    <Truck className="text-emerald-700" size={20} />
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900">Delivery Note</p>
+                    <p className="text-xs text-slate-500">Goods dispatch & receipt</p>
+                  </div>
+                </Link>
+
+                <Link 
+                  to="/finance?type=job_card"
+                  onClick={() => setShowCreateDropdown(false)}
+                  className="flex items-center gap-3 px-3 py-3 hover:bg-slate-50 transition-colors"
+                >
+                  <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                    <ClipboardCheck className="text-slate-800" size={20} />
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900">Service Job Card</p>
+                    <p className="text-xs text-slate-500">On-site service completion & sign-off</p>
+                  </div>
+                </Link>
+                
+                <Link 
                   to="/editor/business-card"
                   onClick={() => setShowCreateDropdown(false)}
                   className="flex items-center gap-3 px-3 py-3 hover:bg-slate-50 transition-colors"
@@ -247,6 +277,8 @@ const DocumentsPage = () => {
               <option value="">All Types</option>
               <option value="INVOICE">Invoices</option>
               <option value="QUOTATION">Quotations</option>
+              <option value="DELIVERY_NOTE">Delivery Notes</option>
+              <option value="JOB_CARD">Service Job Cards</option>
               <option value="LETTERHEAD">Letterheads</option>
               <option value="RECEIPT">Receipts</option>
             </select>
@@ -287,7 +319,8 @@ const DocumentsPage = () => {
           </div>
         ) : (
           <>
-            <table className="w-full">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[620px]">
               <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Document</th>
@@ -305,12 +338,18 @@ const DocumentsPage = () => {
                       <div className="flex items-center gap-3">
                         <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${
                           doc.type === 'INVOICE' ? 'bg-orange-100' : 
-                          doc.type === 'QUOTATION' ? 'bg-blue-100' : 'bg-slate-100'
+                          doc.type === 'QUOTATION' ? 'bg-blue-100' :
+                          doc.type === 'DELIVERY_NOTE' ? 'bg-emerald-100' :
+                          doc.type === 'JOB_CARD' ? 'bg-slate-100' : 'bg-slate-100'
                         }`}>
                           {doc.type === 'INVOICE' ? (
                             <Receipt className="text-orange-600" size={18} />
                           ) : doc.type === 'QUOTATION' ? (
                             <FileSpreadsheet className="text-blue-600" size={18} />
+                          ) : doc.type === 'DELIVERY_NOTE' ? (
+                            <Truck className="text-emerald-700" size={18} />
+                          ) : doc.type === 'JOB_CARD' ? (
+                            <ClipboardCheck className="text-slate-800" size={18} />
                           ) : (
                             <FileText className="text-slate-600" size={18} />
                           )}
@@ -380,8 +419,9 @@ const DocumentsPage = () => {
                 ))}
               </tbody>
             </table>
+          </div>
             
-            {/* Pagination */}
+          {/* Pagination */}
             {pagination.pages > 1 && (
               <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
                 <p className="text-sm text-slate-500">

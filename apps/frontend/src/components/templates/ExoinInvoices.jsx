@@ -1,94 +1,11 @@
 import React, { useState } from 'react';
 import { Printer, Download } from 'lucide-react';
 
-// --- UPDATED LOGO - Simple, consistent rendering for preview and PDF ---
+// --- OFFICIAL UNIVERSAL LOGO ---
+import { Logo } from "./Logo";
+
 export const InvoiceLogo = ({ scale = 1, forExport = false }) => {
-  const colors = {
-      iconNavy: '#1E3A8A',
-      iconOrange: '#F97316',
-      text: '#0F172A',
-      subText: '#64748B',
-      dot: '#F97316',
-  };
-
-  // Dimensions
-  const iconSize = 48;
-  const fontSize = 30;
-  const textWidth = 95;
-  const textHeight = 35;
-
-  return (
-    <div style={{ 
-      display: 'inline-flex', 
-      alignItems: 'center', 
-      gap: '12px',
-      transform: `scale(${scale})`, 
-      transformOrigin: 'left' 
-    }}>
-      {/* A. THE ICON */}
-      <svg viewBox="0 0 100 100" fill="none" width={iconSize} height={iconSize} style={{ flexShrink: 0, display: 'block' }}>
-        <path 
-          d="M15 30 C15 21.7157 21.7157 15 30 15 H55 L55 45 L85 75 H60 C51.7157 75 45 68.2843 45 60 V60 L15 30 Z" 
-          fill={colors.iconNavy} 
-        />
-        <path 
-          d="M85 70 C85 78.2843 78.2843 85 70 85 H45 L45 55 L15 25 H40 C48.2843 25 55 31.7157 55 40 V40 L85 70 Z" 
-          fill={colors.iconOrange} 
-        />
-      </svg>
-
-      {/* B. THE TYPOGRAPHY SECTION - Using SVG for pixel-perfect PDF export */}
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '2px' }}>
-        
-        {/* 1. EXOIN Main Text - SVG for consistent export (no cut line on white background) */}
-        <svg 
-          width={textWidth} 
-          height={textHeight} 
-          viewBox={`0 0 ${textWidth} ${textHeight}`}
-          style={{ display: 'block' }}
-        >
-          {/* EXOIN text */}
-          <text
-            x="0"
-            y={fontSize * 0.85}
-            fill={colors.text}
-            style={{
-              fontSize: `${fontSize}px`,
-              fontWeight: 900,
-              fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            EXOIN
-          </text>
-        </svg>
-
-        {/* 2. AFRICA Integration */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-          <div 
-            style={{ 
-              width: '5px', 
-              height: '5px', 
-              borderRadius: '50%',
-              backgroundColor: colors.dot, 
-            }}
-          />
-          <span 
-            style={{ 
-              fontSize: '8px', 
-              fontWeight: 700, 
-              letterSpacing: '0.25em', 
-              textTransform: 'uppercase',
-              color: colors.subText 
-            }}
-          >
-            AFRICA
-          </span>
-        </div>
-
-      </div>
-    </div>
-  );
+  return <Logo scale={scale} forExport={forExport} variant="default" />;
 };
 
 export const InvoiceTemplate = ({

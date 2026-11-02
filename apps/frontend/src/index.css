@@ -2,9 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global input styling - ensure visible text */
+/* Global input styling - ensure visible text in all themes and states */
 @layer base {
-  /* Light mode: dark text on white background */
+  /* Light mode: dark text on light/white background */
   input, textarea, select {
     @apply bg-white text-slate-900;
   }
@@ -20,6 +20,38 @@
   
   .dark input::placeholder, .dark textarea::placeholder {
     @apply text-slate-500;
+  }
+
+  /* CRITICAL: Ensure inputs on focus/active always maintain strong text contrast */
+  input:focus, textarea:focus, select:focus,
+  input:active, textarea:active, select:active {
+    color: #0f172a !important; /* Always readable dark slate text in light mode */
+  }
+
+  .dark input:focus, .dark textarea:focus, .dark select:focus,
+  .dark input:active, .dark textarea:active, .dark select:active {
+    background-color: #1e293b !important; /* Keep dark slate background in dark mode */
+    color: #f8fafc !important; /* Pure crisp white/light text */
+  }
+
+  /* Browser autofill styling to prevent white-on-white text */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill {
+    -webkit-text-fill-color: #0f172a !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+
+  .dark input:-webkit-autofill,
+  .dark input:-webkit-autofill:hover, 
+  .dark input:-webkit-autofill:focus,
+  .dark textarea:-webkit-autofill,
+  .dark select:-webkit-autofill {
+    -webkit-text-fill-color: #f8fafc !important;
+    -webkit-box-shadow: 0 0 0px 1000px #1e293b inset !important;
   }
   
   /* Smooth theme transitions */
@@ -285,13 +317,12 @@
 }
 
 .compose-editor .ql-editor pre.ql-syntax {
-  background: #1e293b;
-  color: #e2e8f0;
+  background-color: #282c34;
+  color: #abb2bf;
   padding: 12px;
   border-radius: 6px;
-  font-family: 'Monaco', 'Menlo', monospace;
+  font-family: 'Fira Code', monospace;
   font-size: 13px;
-  overflow-x: auto;
 }
 
 .compose-editor .ql-editor ul,
@@ -353,4 +384,3 @@
 .dark .compose-editor .ql-editor::-webkit-scrollbar-thumb {
   background: #4b5563;
 }
-

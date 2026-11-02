@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import * as argon2 from 'argon2';
 import { prisma } from '../index';
 import { ssoService, SSOSession } from '../services/ssoService';
+import rbacService from '../services/rbacService';
 
 // Extend Fastify types for cookie support
 declare module 'fastify' {
@@ -416,6 +417,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
         location: user.location,
         officeAddress: user.officeAddress,
         signatureStyle: user.signatureStyle,
+        permissions: await rbacService.getUserEffectivePermissions(user),
       }, 
       token 
     };
@@ -454,6 +456,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       location: user.location,
       officeAddress: user.officeAddress,
       signatureStyle: user.signatureStyle,
+      permissions: await rbacService.getUserEffectivePermissions(user),
     };
   });
 }

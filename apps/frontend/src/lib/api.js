@@ -106,6 +106,27 @@ export const usersApi = {
   getAuditLogs: (params) => api.get('/users/audit-logs', { params }),
 };
 
+// Enterprise RBAC API
+
+// SMTP Gateway API
+export const smtpApi = {
+  getStatus: () => api.get("/mail/smtp/status"),
+  verify: () => api.post("/mail/smtp/verify"),
+  updateConfig: (data) => api.post("/mail/smtp/config", data),
+  sendTestEmail: (to) => api.post("/mail/smtp/test", { to }),
+};
+
+export const rbacApi = {
+  getPermissions: () => api.get("/rbac/permissions"),
+  getMatrix: () => api.get("/rbac/matrix"),
+  updateMatrix: (role, permissions) => api.put("/rbac/matrix", { role, permissions }),
+  resetMatrix: (role) => api.post("/rbac/matrix/reset", { role }),
+  getUserPermissions: (userId) => api.get(`/rbac/users/${userId}/permissions`),
+  updateUserPermissions: (userId, customPermissions) => api.put(`/rbac/users/${userId}/permissions`, { customPermissions }),
+  getMyPermissions: () => api.get("/rbac/my-permissions"),
+};
+
+
 // Assets API
 export const assetsApi = {
   getAll: (type) => api.get('/assets', { params: { type } }),

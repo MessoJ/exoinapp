@@ -3,12 +3,15 @@ import { useNavigate, Link } from 'react-router-dom';
 import { clientsApi } from '../lib/api';
 import { 
   ArrowLeft, 
-  Save,
-  Building,
-  Mail,
-  Phone,
-  MapPin,
-  User
+  Save, 
+  Building, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  User, 
+  Sparkles,
+  CheckCircle2,
+  Globe
 } from 'lucide-react';
 
 const ClientCreatePage = () => {
@@ -21,7 +24,8 @@ const ClientCreatePage = () => {
     addressLine1: '',
     city: '',
     country: 'Kenya',
-    contactPerson: ''
+    contactPerson: '',
+    taxId: ''
   });
 
   const handleChange = (e) => {
@@ -45,169 +49,190 @@ const ClientCreatePage = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-4">
+    <div className="max-w-3xl mx-auto space-y-6 antialiased">
+      {/* 1. Header */}
+      <div className="flex items-center gap-3 bg-white/90 backdrop-blur-xl p-4 sm:p-6 rounded-3xl border border-slate-200/80 shadow-xs">
         <Link 
           to="/clients"
-          className="p-2 hover:bg-slate-100 rounded-lg text-slate-500"
+          className="p-2 sm:p-2.5 hover:bg-slate-100 rounded-2xl text-slate-500 active:scale-95 transition-all touch-manipulation"
         >
           <ArrowLeft size={20} />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Add New Client</h1>
-          <p className="text-slate-500">Create a new client in your directory</p>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Add New Client</h1>
+          <p className="text-xs sm:text-sm text-slate-500">Register a new client or business account in your directory</p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Company Information */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <Building size={20} className="text-orange-600" />
-            Company Information
-          </h2>
-          
-          <div className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Card 1: Company Profile */}
+        <div className="bg-white/90 backdrop-blur-md rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-xs space-y-4">
+          <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
+            <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center">
+              <Building size={17} />
+            </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Company Name <span className="text-red-500">*</span>
+              <h2 className="text-sm font-bold text-slate-900 tracking-tight">Organization Profile</h2>
+              <p className="text-[11px] text-slate-400">Legal business entity or individual customer</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                Client / Company Name <span className="text-orange-600">*</span>
               </label>
               <input
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                placeholder="Enter company name"
-                className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                placeholder="e.g. Kenya Revenue Authority (KRA) Western Region"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none transition-all"
                 required
               />
             </div>
-          </div>
-        </div>
 
-        {/* Contact Information */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <User size={20} className="text-orange-600" />
-            Contact Information
-          </h2>
-          
-          <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Contact Person
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                Primary Contact Person
               </label>
               <input
                 type="text"
                 name="contactPerson"
                 value={formData.contactPerson}
                 onChange={handleChange}
-                placeholder="Primary contact name"
-                className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                placeholder="e.g. John Kamau (Procurement)"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-medium text-slate-900 focus:bg-white focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
               />
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Email <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="client@company.com"
-                    className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Phone
-                </label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    placeholder="+254 700 000 000"
-                    className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  />
-                </div>
-              </div>
-            </div>
-            
+
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Address
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                KRA PIN / Tax ID (Optional)
+              </label>
+              <input
+                type="text"
+                name="taxId"
+                value={formData.taxId}
+                onChange={handleChange}
+                placeholder="e.g. P051234567Z"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-medium text-slate-900 focus:bg-white focus:ring-4 focus:ring-orange-500/10 outline-none transition-all uppercase"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Card 2: Contact & Dispatch Coordinates */}
+        <div className="bg-white/90 backdrop-blur-md rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-xs space-y-4">
+          <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
+            <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
+              <Phone size={17} />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 tracking-tight">Contact & Location Coordinates</h2>
+              <p className="text-[11px] text-slate-400">Used automatically on Service Job Cards and Invoices</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                Email Address <span className="text-orange-600">*</span>
               </label>
               <div className="relative">
-                <MapPin className="absolute left-3 top-3 text-slate-400" size={18} />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="procurement@organization.co.ke"
+                  className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-medium text-slate-900 focus:bg-white focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none transition-all"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                Phone Number
+              </label>
+              <div className="relative">
+                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="+254 700 000 000"
+                  className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-medium text-slate-900 focus:bg-white focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                Premises / Street Address
+              </label>
+              <div className="relative">
+                <MapPin className="absolute left-3.5 top-3 text-slate-400" size={16} />
                 <input
                   type="text"
                   name="addressLine1"
                   value={formData.addressLine1}
                   onChange={handleChange}
-                  placeholder="Street address"
-                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  placeholder="e.g. Lake Hub Mall, Mega City 2nd Floor"
+                  className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-medium text-slate-900 focus:bg-white focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none transition-all"
                 />
               </div>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  City
-                </label>
-                <input
-                  type="text"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleChange}
-                  placeholder="Nairobi"
-                  className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Country
-                </label>
-                <input
-                  type="text"
-                  name="country"
-                  value={formData.country}
-                  onChange={handleChange}
-                  placeholder="Kenya"
-                  className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                City / Town
+              </label>
+              <input
+                type="text"
+                name="city"
+                value={formData.city}
+                onChange={handleChange}
+                placeholder="e.g. Kisumu / Nairobi"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-medium text-slate-900 focus:bg-white focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                Country
+              </label>
+              <input
+                type="text"
+                name="country"
+                value={formData.country}
+                onChange={handleChange}
+                placeholder="Kenya"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-medium text-slate-900 focus:bg-white focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
+              />
             </div>
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center justify-end gap-3">
+        {/* Actions Bar */}
+        <div className="flex items-center justify-end gap-3 pt-2">
           <Link
             to="/clients"
-            className="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-lg font-medium transition-colors"
+            className="px-5 py-2.5 border border-slate-200 hover:bg-slate-50 rounded-2xl text-xs font-semibold text-slate-600 transition-colors"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-bold shadow-md shadow-slate-900/10 active:scale-95 transition-all disabled:opacity-50 touch-manipulation"
           >
-            <Save size={18} />
-            {loading ? 'Saving...' : 'Save Client'}
+            <Save size={16} />
+            {loading ? 'Registering...' : 'Save Client'}
           </button>
         </div>
       </form>

@@ -1,75 +1,13 @@
 import React, { useState } from 'react';
 import { Layers, Type, Palette, X as XIcon, LayoutGrid, Download, Shield } from 'lucide-react';
+import { Logo } from './Logo';
 
 const ExoinBrandGuidelines = () => {
   const [activeOption, setActiveOption] = useState('option2'); // Default to B
 
-  // --- UPDATED LOGO COMPONENT (Exact Match to provided Logo.tsx logic) ---
+  // --- REUSABLE LOGO COMPONENT ---
   const GuidelineLogo = ({ variant = 'dark', scale = 1 }) => {
-    const isMonochrome = variant === 'monochrome';
-    const isDark = variant === 'dark' || variant === 'monochrome';
-
-    const colors = {
-        iconNavy: isMonochrome ? '#FFFFFF' : '#1E3A8A',
-        iconOrange: isMonochrome ? '#FFFFFF' : '#F97316',
-        text: isDark ? '#FFFFFF' : '#0F172A',
-        subText: isDark ? '#94A3B8' : '#64748B',
-        dot: isMonochrome ? '#FFFFFF' : '#F97316',
-    };
-
-    return (
-      <div className="group relative inline-flex items-center gap-3 select-none" style={{ transform: `scale(${scale})`, transformOrigin: 'center' }}>
-        {/* A. THE ICON (h-12) */}
-        <div className="h-12 w-12 relative flex-shrink-0 drop-shadow-lg">
-          <svg viewBox="0 0 100 100" fill="none" className="w-full h-full">
-            <path 
-              d="M15 30 C15 21.7157 21.7157 15 30 15 H55 L55 45 L85 75 H60 C51.7157 75 45 68.2843 45 60 V60 L15 30 Z" 
-              fill={colors.iconNavy} 
-            />
-            <path 
-              d="M85 70 C85 78.2843 78.2843 85 70 85 H45 L45 55 L15 25 H40 C48.2843 25 55 31.7157 55 40 V40 L85 70 Z" 
-              fill={colors.iconOrange} 
-            />
-          </svg>
-        </div>
-
-        {/* B. THE TYPOGRAPHY SECTION (h-11) */}
-        <div className="flex flex-col justify-between h-11 py-0.5 w-full">
-          
-          {/* 1. EXOIN Main Text */}
-          <div className="relative leading-none">
-            <h1 
-              className="text-3xl font-black tracking-tighter leading-none m-0"
-              style={{ 
-                color: colors.text,
-                fontFamily: 'sans-serif',
-                // True transparency cut using clip-path
-                clipPath: 'polygon(0% 0%, 100% 0%, 100% 72%, 0% 72%, 0% 78%, 100% 78%, 100% 100%, 0% 100%)'
-              }}
-            >
-              EXOIN
-            </h1>
-          </div>
-
-          {/* 2. AFRICA Integration (Justify Right - Line Removed) */}
-          <div className="relative h-3 w-full flex items-center justify-end gap-2">
-            <div className="flex-shrink-0 flex items-center gap-1">
-              <div 
-                className="w-1 h-1 rounded-full" 
-                style={{ backgroundColor: colors.dot, boxShadow: `0 0 5px ${colors.dot}` }}
-              />
-              <span 
-                className="text-[8px] font-bold tracking-[0.5em] uppercase"
-                style={{ color: colors.subText }}
-              >
-                AFRICA
-              </span>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    );
+    return <Logo variant={variant === 'light' ? 'default' : variant} scale={scale} />;
   };
 
   return (

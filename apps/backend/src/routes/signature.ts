@@ -3,10 +3,8 @@ import { prisma } from '../index';
 
 export default async function signatureRoutes(fastify: FastifyInstance) {
   
-  // Get current user's signature settings
-  fastify.get('/settings', {
-    preHandler: [(fastify as any).authenticate]
-  }, async (request, reply) => {
+  // Handler for getting signature settings
+  const handleGetSignatureSettings = async (request: any, reply: any) => {
     const { id: userId } = (request as any).user;
     
     const user = await prisma.user.findUnique({
@@ -43,17 +41,24 @@ export default async function signatureRoutes(fastify: FastifyInstance) {
     }
 
     return user;
-  });
+  };
 
-  // Update signature settings (only editable fields)
-  fastify.put('/settings', {
+  // Get current user's signature settings
+  fastify.get('/settings', {
     preHandler: [(fastify as any).authenticate]
-  }, async (request, reply) => {
+  }, handleGetSignatureSettings);
+
+  fastify.get('/', {
+    preHandler: [(fastify as any).authenticate]
+  }, handleGetSignatureSettings);
+
+  // Handler for updating signature settings
+  const handleUpdateSignatureSettings = async (request: any, reply: any) => {
     const { id: userId } = (request as any).user;
     const {
       signatureEnabled,
       signatureStyle,
-      signatureHtml, // Allow saving custom HTML directly
+      signatureHtml,
       linkedinUrl,
       twitterUrl,
       instagramUrl,
@@ -63,7 +68,6 @@ export default async function signatureRoutes(fastify: FastifyInstance) {
       jobTitle,
     } = request.body as any;
 
-    // First update the settings
     const userWithCompany = await prisma.user.update({
       where: { id: userId },
       data: {
@@ -82,15 +86,11 @@ export default async function signatureRoutes(fastify: FastifyInstance) {
       }
     });
 
-    // If custom signatureHtml is provided, save it directly
-    // Otherwise, regenerate from settings
     let finalSignatureHtml = signatureHtml;
     if (!signatureHtml && signatureEnabled) {
-      // Generate the HTML based on current settings
       finalSignatureHtml = generateSignatureHTML(userWithCompany, userWithCompany.company, false);
     }
 
-    // Update the signatureHtml field and return final user data
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
@@ -125,7 +125,16 @@ export default async function signatureRoutes(fastify: FastifyInstance) {
     });
 
     return updatedUser;
-  });
+  };
+
+  // Update signature settings
+  fastify.put('/settings', {
+    preHandler: [(fastify as any).authenticate]
+  }, handleUpdateSignatureSettings);
+
+  fastify.put('/', {
+    preHandler: [(fastify as any).authenticate]
+  }, handleUpdateSignatureSettings);
 
   // Save custom signature HTML directly
   fastify.put('/html', {
@@ -138,26 +147,23 @@ export default async function signatureRoutes(fastify: FastifyInstance) {
       where: { id: userId },
       data: {
         signatureHtml: html,
-        signatureEnabled: !!html,
       },
       select: {
         id: true,
-        signatureEnabled: true,
         signatureHtml: true,
       }
     });
 
-    return { success: true, html: user.signatureHtml };
+    return user;
   });
 
-  // Generate HTML signature
+  // Get rendered signature HTML (for copy/paste into email clients)
   fastify.get('/html', {
     preHandler: [(fastify as any).authenticate]
   }, async (request, reply) => {
     const { id: userId } = (request as any).user;
-    const { darkMode = 'false', regenerate = 'false' } = request.query as any;
+    const { darkMode = 'false' } = request.query as any;
     const isDark = darkMode === 'true';
-    const forceRegenerate = regenerate === 'true';
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -170,181 +176,109 @@ export default async function signatureRoutes(fastify: FastifyInstance) {
       return reply.status(404).send({ error: 'User not found' });
     }
 
-    if (!user.signatureEnabled) {
-      return { html: '', enabled: false };
+    if (user.signatureHtml) {
+      return { html: user.signatureHtml };
     }
 
-    // If user has a stored signature and not forcing regeneration, return it
-    if (user.signatureHtml && !forceRegenerate && !isDark) {
-      return { html: user.signatureHtml, enabled: true };
-    }
-
-    // Generate fresh HTML (for dark mode or if no stored signature)
     const html = generateSignatureHTML(user, user.company, isDark);
-    
-    // If light mode and no stored signature, save it for future use
-    if (!isDark && !user.signatureHtml) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { signatureHtml: html }
-      });
-    }
-
-    return { html, enabled: true };
+    return { html };
   });
 
-  // Get available signature styles
-  fastify.get('/styles', {
+  // Toggle signature enabled/disabled
+  fastify.post('/toggle', {
     preHandler: [(fastify as any).authenticate]
   }, async (request, reply) => {
-    return {
-      styles: [
-        {
-          id: 'executive',
-          name: 'Executive Link',
-          description: 'Professional signature with avatar, full contact info, and social links',
-          preview: 'Full signature with photo, details, logo, and social icons'
-        },
-        {
-          id: 'compact',
-          name: 'Compact',
-          description: 'Minimal signature with essential contact information',
-          preview: 'Logo + Name + Title + Basic contact info'
-        }
-      ]
-    };
-  });
+    const { id: userId } = (request as any).user;
+    const { enabled } = request.body as any;
 
-  // Preview signature (for editor)
-  fastify.post('/preview', {
-    preHandler: [(fastify as any).authenticate]
-  }, async (request, reply) => {
-    const { id: userId, companyId } = (request as any).user;
-    const previewData = request.body as any;
-    const { darkMode = false } = previewData;
-
-    const user = await prisma.user.findUnique({
+    const user = await prisma.user.update({
       where: { id: userId },
-      include: { company: true }
+      data: {
+        signatureEnabled: enabled,
+      },
+      select: {
+        id: true,
+        signatureEnabled: true,
+      }
     });
 
-    if (!user) {
-      return reply.status(404).send({ error: 'User not found' });
-    }
-
-    // Merge preview data with user data
-    const previewUser = {
-      ...user,
-      ...previewData,
-    };
-
-    const html = generateSignatureHTML(previewUser, user.company, darkMode);
-    return { html };
+    return user;
   });
 }
 
-// Generate EMAIL-CLIENT COMPATIBLE HTML signature
-// Rules: No SVG, No flexbox, No CSS transforms, Tables only, All inline styles
-function generateSignatureHTML(user: any, company: any, isDark: boolean = false): string {
-  const style = user.signatureStyle || 'executive';
+function generateSignatureHTML(user: any, company: any, isDark: boolean): string {
+  const primaryColor = company?.primaryColor || '#1E3A8A';
+  const secondaryColor = company?.secondaryColor || '#F97316';
   
-  // Colors
-  const accentColor = '#F97316'; // Orange
-  const textColor = isDark ? '#FFFFFF' : '#0F172A';
-  const titleColor = '#EA580C';
-  const contactTextColor = isDark ? '#CBD5E1' : '#475569';
-  const addressColor = isDark ? '#64748B' : '#94A3B8';
+  const textColor = isDark ? '#f1f5f9' : '#0F172A';
+  const titleColor = secondaryColor;
+  const contactTextColor = isDark ? '#94a3b8' : '#334155';
+  const addressColor = isDark ? '#64748b' : '#64748B';
   const borderColor = isDark ? '#334155' : '#E2E8F0';
-  const avatarBg = isDark ? '#1E293B' : '#E2E8F0';
-  const logoTextColor = isDark ? '#FFFFFF' : '#1E3A8A';
-  const confidentialityColor = isDark ? '#64748B' : '#94A3B8';
-  const bgColor = isDark ? '#1E1E1E' : '#FFFFFF';
+  const confidentialityColor = isDark ? '#64748b' : '#94A3B8';
+  const accentColor = secondaryColor;
 
-  const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'John Doe';
-  const initials = `${user.firstName?.charAt(0) || 'J'}${user.lastName?.charAt(0) || 'D'}`;
-  const displayTitle = user.jobTitle || 'Chief Operations Officer';
-  const displayPhone = user.phone || '+254 700 000 000';
-  const displayEmail = user.email || 'john@exoin.africa';
+  const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Team Member';
+  const displayTitle = user.jobTitle || 'Executive';
+  const displayPhone = user.phone || '0739443244';
+  const displayEmail = user.email;
   const displayLocation = user.location || 'Nairobi, Kenya';
-  const displayWebsite = company?.website?.replace('https://', '').replace('http://', '') || 'exoin.africa';
-  const displayAddress = user.officeAddress || 'Exoin Tower, Westlands Road';
+  const displayAddress = user.officeAddress || 'Westlands Tower, Waiyaki Way';
 
-  // Social links using Unicode/text (email-safe)
-  const linkedinLink = user.linkedinUrl ? `<a href="${user.linkedinUrl}" style="color:${accentColor};text-decoration:none;font-weight:bold;margin-right:12px;">in</a>` : '';
-  const twitterLink = user.twitterUrl ? `<a href="${user.twitterUrl}" style="color:${accentColor};text-decoration:none;font-weight:bold;margin-right:12px;">𝕏</a>` : '';
-  const instagramLink = user.instagramUrl ? `<a href="${user.instagramUrl}" style="color:${accentColor};text-decoration:none;font-weight:bold;">📷</a>` : '';
   const hasSocialLinks = user.linkedinUrl || user.twitterUrl || user.instagramUrl;
+  
+  const linkedinLink = user.linkedinUrl ? `<a href="${user.linkedinUrl}" style="text-decoration:none;margin-right:6px;"><img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" width="14" height="14" style="vertical-align:middle;" alt="LinkedIn" /></a>` : '';
+  const twitterLink = user.twitterUrl ? `<a href="${user.twitterUrl}" style="text-decoration:none;margin-right:6px;"><img src="https://cdn-icons-png.flaticon.com/512/5969/5969020.png" width="14" height="14" style="vertical-align:middle;" alt="Twitter" /></a>` : '';
+  const instagramLink = user.instagramUrl ? `<a href="${user.instagramUrl}" style="text-decoration:none;"><img src="https://cdn-icons-png.flaticon.com/512/174/174855.png" width="14" height="14" style="vertical-align:middle;" alt="Instagram" /></a>` : '';
 
-  if (style === 'executive') {
+  if (user.signatureStyle === 'minimal') {
     return `
-<!--[if mso]><table width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;"><tr><td><![endif]-->
-<table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;margin-top:20px;background-color:${bgColor};">
+<!--[if mso]><table width="500" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:500px;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;margin-top:20px;">
   <tr>
-    <td colspan="3" style="border-top:3px solid ${accentColor};padding-top:20px;"></td>
+    <td style="padding-bottom:8px;">
+      <span style="font-size:15px;font-weight:bold;color:${textColor};">${fullName}</span>
+      <span style="font-size:13px;color:${titleColor};margin-left:8px;">| &nbsp;${displayTitle}</span>
+    </td>
   </tr>
   <tr>
-    <td width="70" valign="top" style="padding-right:15px;">
-      <table cellpadding="0" cellspacing="0" border="0" width="60" height="60" style="border-radius:30px;background-color:${avatarBg};border:2px solid ${borderColor};">
-        <tr>
-          <td align="center" valign="middle" style="font-size:18px;font-weight:bold;color:${contactTextColor};">
-            ${initials}
-          </td>
-        </tr>
-      </table>
+    <td style="border-top:1px solid ${borderColor};padding-top:8px;font-size:11px;color:${contactTextColor};line-height:1.5;">
+      <span><strong>${company?.name || 'Exoin Africa'}</strong></span> &nbsp;•&nbsp; 
+      <span>${displayPhone}</span> &nbsp;•&nbsp; 
+      <a href="mailto:${displayEmail}" style="color:${primaryColor};text-decoration:none;">${displayEmail}</a>
+      ${company?.website ? `&nbsp;•&nbsp; <a href="${company.website}" style="color:${primaryColor};text-decoration:none;">${company.website.replace(/^https?:\/\//, '')}</a>` : ''}
     </td>
-    <td valign="top" style="padding-right:20px;">
+  </tr>
+</table>
+<!--[if mso]></td></tr></table><![endif]-->
+    `.trim();
+  }
+
+  return `
+<!--[if mso]><table width="520" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:520px;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;margin-top:20px;">
+  <tr>
+    <td valign="top" style="padding-right:15px;border-right:2px solid ${accentColor};">
+      <div style="font-weight:900;font-size:18px;color:${primaryColor};letter-spacing:-0.5px;">EXOIN</div>
+      <div style="font-size:8px;font-weight:bold;color:${secondaryColor};letter-spacing:2px;text-transform:uppercase;">AFRICA</div>
+    </td>
+    <td style="width:15px;"></td>
+    <td valign="top">
       <table cellpadding="0" cellspacing="0" border="0" width="100%">
         <tr>
-          <td style="font-size:18px;font-weight:bold;color:${textColor};padding-bottom:2px;">
-            ${fullName}
+          <td style="font-size:14px;font-weight:bold;color:${textColor};">${fullName}</td>
+        </tr>
+        <tr>
+          <td style="font-size:11px;color:${titleColor};font-weight:600;padding-bottom:5px;">${displayTitle}</td>
+        </tr>
+        <tr>
+          <td style="font-size:11px;color:${contactTextColor};line-height:1.5;">
+            📞 ${displayPhone} &nbsp;|&nbsp; ✉️ <a href="mailto:${displayEmail}" style="color:${primaryColor};text-decoration:none;">${displayEmail}</a>
           </td>
         </tr>
         <tr>
-          <td style="font-size:11px;font-weight:bold;color:${titleColor};text-transform:uppercase;letter-spacing:1px;padding-bottom:12px;">
-            ${displayTitle}
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <table cellpadding="0" cellspacing="0" border="0" style="font-size:12px;color:${contactTextColor};">
-              <tr>
-                <td style="padding:3px 25px 3px 0;">
-                  <a href="tel:${displayPhone}" style="color:${contactTextColor};text-decoration:none;">📞 ${displayPhone}</a>
-                </td>
-                <td style="padding:3px 0;">
-                  <a href="mailto:${displayEmail}" style="color:${contactTextColor};text-decoration:none;">✉️ ${displayEmail}</a>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:3px 25px 3px 0;">
-                  📍 ${displayLocation}
-                </td>
-                <td style="padding:3px 0;">
-                  <a href="https://${displayWebsite}" style="color:${contactTextColor};text-decoration:none;">🌐 ${displayWebsite}</a>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td style="font-size:10px;color:${addressColor};padding-top:6px;">
-            ${displayAddress}
-          </td>
-        </tr>
-      </table>
-    </td>
-    <td width="100" valign="top" style="border-left:1px solid ${borderColor};padding-left:15px;">
-      <table cellpadding="0" cellspacing="0" border="0">
-        <tr>
-          <td style="padding-bottom:10px;">
-            <table cellpadding="0" cellspacing="0" border="0">
-              <tr>
-                <td style="font-size:20px;font-weight:900;color:${logoTextColor};letter-spacing:-1px;">EXOIN</td>
-              </tr>
-              <tr>
-                <td style="font-size:7px;font-weight:600;color:${addressColor};letter-spacing:3px;text-align:right;">AFRICA</td>
-              </tr>
-            </table>
+          <td style="font-size:10px;color:${addressColor};padding-top:2px;">
+            🏢 ${displayAddress}, ${displayLocation}
           </td>
         </tr>
         ${hasSocialLinks ? `
@@ -354,43 +288,6 @@ function generateSignatureHTML(user: any, company: any, isDark: boolean = false)
           </td>
         </tr>
         ` : ''}
-      </table>
-    </td>
-  </tr>
-  <tr>
-    <td colspan="3" style="padding-top:15px;">
-      <table cellpadding="0" cellspacing="0" border="0" width="100%">
-        <tr>
-          <td style="border-top:1px solid ${borderColor};padding-top:10px;font-size:9px;color:${confidentialityColor};line-height:1.4;">
-            <strong>Confidentiality Notice:</strong> This email is intended only for the person to whom it is addressed. If you are not the intended recipient, you are not authorized to read, print, retain, copy, disseminate, distribute, or use this message or any part thereof.
-          </td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-</table>
-<!--[if mso]></td></tr></table><![endif]-->
-    `.trim();
-  }
-
-  // Compact style
-  return `
-<!--[if mso]><table width="400" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
-<table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:400px;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;margin-top:20px;border-top:2px solid ${accentColor};padding-top:10px;">
-  <tr>
-    <td valign="middle" style="padding:10px 0;">
-      <table cellpadding="0" cellspacing="0" border="0">
-        <tr>
-          <td style="font-size:14px;font-weight:bold;color:${textColor};">${fullName}</td>
-        </tr>
-        <tr>
-          <td style="font-size:11px;color:${contactTextColor};">${displayTitle}${company?.name ? ` • ${company.name}` : ''}</td>
-        </tr>
-        <tr>
-          <td style="font-size:11px;color:${addressColor};padding-top:4px;">
-            📞 ${displayPhone} &nbsp;|&nbsp; ✉️ ${displayEmail}
-          </td>
-        </tr>
       </table>
     </td>
   </tr>

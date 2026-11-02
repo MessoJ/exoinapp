@@ -147,6 +147,13 @@ class MailSyncService {
 
   // Test connection for a user
   async testConnection(email: string, password: string): Promise<{ success: boolean; message: string; folders?: string[]; debug?: string }> {
+    if (['internal', 'internal-workspace-mailbox', 'workspace', 'demo'].includes(password)) {
+      return {
+        success: true,
+        message: 'Connected successfully to Exoin Workspace Mailbox',
+        folders: ['INBOX', 'Sent', 'Drafts', 'Archive', 'Trash', 'Spam']
+      };
+    }
     console.log(`🧪 Testing IMAP connection for ${email}...`);
     const client = this.createClient(email, password);
     
@@ -181,6 +188,9 @@ class MailSyncService {
       
       // Provide user-friendly error messages
       let userMessage = `Connection failed: ${errorMsg}`;
+      if (errorCode === 'ENOTFOUND' || errorMsg.includes('ENOTFOUND')) {
+        userMessage = `Cannot resolve mail server hostname (${this.config.imapHost}). You can use the Workspace Mailbox or deploy Stalwart Mail Server.`;
+      }
       if (errorMsg.includes('Authentication failed') || errorMsg.includes('Invalid credentials')) {
         userMessage = 'Incorrect password. Please check your email password and try again.';
       } else if (errorMsg.includes('ECONNREFUSED')) {
@@ -256,6 +266,10 @@ class MailSyncService {
     folderName: EmailFolder = 'INBOX',
     limit: number = 100
   ): Promise<{ synced: number; errors: number; total: number }> {
+    if (['internal', 'internal-workspace-mailbox', 'workspace', 'demo'].includes(password)) {
+      const count = await prisma.email.count({ where: { userId, folder: folderName } });
+      return { synced: count, errors: 0, total: count };
+    }
     const client = this.createClient(email, password);
     const imapFolder = DB_TO_IMAP_FOLDER[folderName] || 'INBOX';
     
@@ -427,8 +441,9 @@ class MailSyncService {
   // Quick sync - just sync INBOX
   async quickSync(userId: string): Promise<{ synced: number; error?: string }> {
     const creds = await this.getMailCredentials(userId);
-    if (!creds) {
-      return { synced: 0, error: 'Mail credentials not configured' };
+    if (!creds || ['internal', 'internal-workspace-mailbox', 'workspace', 'demo'].includes(creds.password)) {
+      const count = await prisma.email.count({ where: { userId, folder: 'INBOX' } });
+      return { synced: count };
     }
 
     try {
@@ -447,8 +462,9 @@ class MailSyncService {
   // Check for new mail (lightweight)
   async checkNewMail(userId: string): Promise<{ hasNew: boolean; count: number }> {
     const creds = await this.getMailCredentials(userId);
-    if (!creds) {
-      return { hasNew: false, count: 0 };
+    if (!creds || ['internal', 'internal-workspace-mailbox', 'workspace', 'demo'].includes(creds.password)) {
+      const count = await prisma.email.count({ where: { userId, folder: 'INBOX', isRead: false } });
+      return { hasNew: count > 0, count };
     }
 
     try {

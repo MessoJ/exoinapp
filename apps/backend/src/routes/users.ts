@@ -2,6 +2,8 @@ import { FastifyInstance } from 'fastify';
 import * as argon2 from 'argon2';
 import { prisma } from '../index';
 import userMailboxLinkService from '../services/userMailboxLinkService';
+import rbacService from '../services/rbacService';
+import { UserRole } from '@prisma/client';
 
 export default async function usersRoutes(fastify: FastifyInstance) {
   
@@ -9,12 +11,13 @@ export default async function usersRoutes(fastify: FastifyInstance) {
   fastify.get('/', { 
     preHandler: [(fastify as any).authenticate] 
   }, async (request, reply) => {
-    const { role, companyId } = (request as any).user;
+    const currentUser = (request as any).user;
+    const permissions = await rbacService.getUserEffectivePermissions(currentUser);
     
-    // Only ADMIN and MANAGER can view all users
-    if (role !== 'ADMIN' && role !== 'MANAGER') {
-      return reply.status(403).send({ error: 'Access denied' });
+    if (!rbacService.hasPermission(permissions, 'users:read')) {
+      return reply.status(403).send({ error: 'Access denied: requires users:read permission' });
     }
+    const { companyId } = currentUser;
     
     // Use the service to get users with mailbox status
     const users = await userMailboxLinkService.getUsersWithMailboxStatus(companyId);
@@ -91,12 +94,13 @@ export default async function usersRoutes(fastify: FastifyInstance) {
   fastify.post('/', { 
     preHandler: [(fastify as any).authenticate] 
   }, async (request, reply) => {
-    const { role, companyId } = (request as any).user;
+    const currentUser = (request as any).user;
+    const permissions = await rbacService.getUserEffectivePermissions(currentUser);
     
-    // Only ADMIN can create users
-    if (role !== 'ADMIN') {
-      return reply.status(403).send({ error: 'Only administrators can create users' });
+    if (!rbacService.hasPermission(permissions, 'users:create')) {
+      return reply.status(403).send({ error: 'Access denied: requires users:create permission' });
     }
+    const { companyId } = currentUser;
     
     const { email, password, firstName, lastName, userRole, jobTitle, phone } = request.body as any;
     
@@ -151,11 +155,11 @@ export default async function usersRoutes(fastify: FastifyInstance) {
   fastify.put('/:id', { 
     preHandler: [(fastify as any).authenticate] 
   }, async (request, reply) => {
-    const { role, companyId, id: currentUserId } = (request as any).user;
+    const currentUser = (request as any).user;
+    const { companyId, id: currentUserId } = currentUser;
     const { id } = request.params as { id: string };
     const body = request.body as any;
     
-    // Check if user exists in same company
     const existingUser = await prisma.user.findFirst({
       where: { id, companyId }
     });
@@ -163,41 +167,42 @@ export default async function usersRoutes(fastify: FastifyInstance) {
     if (!existingUser) {
       return reply.status(404).send({ error: 'User not found' });
     }
+
+    const permissions = await rbacService.getUserEffectivePermissions(currentUser);
+    const canUpdateAny = rbacService.hasPermission(permissions, 'users:update');
+    const canManageRoles = rbacService.hasPermission(permissions, 'users:roles:manage');
+
+    if (!canUpdateAny && id !== currentUserId) {
+      return reply.status(403).send({ error: 'Access denied: requires users:update permission' });
+    }
     
-    // Build update data based on permissions
     let updateData: any = {};
-    
-    if (role === 'ADMIN') {
-      // Admin can update all fields
+    if (canUpdateAny) {
       if (body.firstName !== undefined) updateData.firstName = body.firstName;
       if (body.lastName !== undefined) updateData.lastName = body.lastName;
-      if (body.email !== undefined) {
-        // Check if new email is already taken
-        if (body.email !== existingUser.email) {
-          const emailTaken = await prisma.user.findUnique({ where: { email: body.email } });
-          if (emailTaken) {
-            return reply.status(400).send({ error: 'Email already in use' });
-          }
-        }
+      if (body.email !== undefined && body.email !== existingUser.email) {
+        const emailTaken = await prisma.user.findUnique({ where: { email: body.email } });
+        if (emailTaken) return reply.status(400).send({ error: 'Email already in use' });
         updateData.email = body.email;
       }
-      if (body.role !== undefined) updateData.role = body.role;
       if (body.jobTitle !== undefined) updateData.jobTitle = body.jobTitle;
       if (body.phone !== undefined) updateData.phone = body.phone;
       if (body.status !== undefined) updateData.isActive = body.status === 'ACTIVE';
+      if (body.isActive !== undefined) updateData.isActive = Boolean(body.isActive);
       if (body.password) {
         updateData.passwordHash = await argon2.hash(body.password);
       }
+      if (canManageRoles) {
+        if (body.role !== undefined) updateData.role = body.role;
+        if (body.customPermissions !== undefined) updateData.customPermissions = body.customPermissions;
+      }
     } else if (id === currentUserId) {
-      // Users can only update their own limited fields
       if (body.firstName !== undefined) updateData.firstName = body.firstName;
       if (body.lastName !== undefined) updateData.lastName = body.lastName;
       if (body.phone !== undefined) updateData.phone = body.phone;
       if (body.password) {
         updateData.passwordHash = await argon2.hash(body.password);
       }
-    } else {
-      return reply.status(403).send({ error: 'Access denied' });
     }
     
     // Perform update
@@ -228,13 +233,14 @@ export default async function usersRoutes(fastify: FastifyInstance) {
   fastify.patch('/:id/status', { 
     preHandler: [(fastify as any).authenticate] 
   }, async (request, reply) => {
-    const { role, companyId, id: currentUserId } = (request as any).user;
+    const currentUser = (request as any).user;
+    const { companyId, id: currentUserId } = currentUser;
     const { id } = request.params as { id: string };
     const { status } = request.body as { status: string };
     
-    // Only ADMIN can change status
-    if (role !== 'ADMIN') {
-      return reply.status(403).send({ error: 'Only administrators can change user status' });
+    const permissions = await rbacService.getUserEffectivePermissions(currentUser);
+    if (!rbacService.hasPermission(permissions, 'users:update')) {
+      return reply.status(403).send({ error: 'Access denied: requires users:update permission' });
     }
     
     // Can't deactivate yourself
@@ -274,12 +280,13 @@ export default async function usersRoutes(fastify: FastifyInstance) {
   fastify.delete('/:id', { 
     preHandler: [(fastify as any).authenticate] 
   }, async (request, reply) => {
-    const { role, companyId, id: currentUserId } = (request as any).user;
+    const currentUser = (request as any).user;
+    const { companyId, id: currentUserId } = currentUser;
     const { id } = request.params as { id: string };
     
-    // Only ADMIN can delete users
-    if (role !== 'ADMIN') {
-      return reply.status(403).send({ error: 'Only administrators can delete users' });
+    const permissions = await rbacService.getUserEffectivePermissions(currentUser);
+    if (!rbacService.hasPermission(permissions, 'users:delete')) {
+      return reply.status(403).send({ error: 'Access denied: requires users:delete permission' });
     }
     
     // Can't delete yourself

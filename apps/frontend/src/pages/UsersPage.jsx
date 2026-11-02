@@ -1,239 +1,169 @@
-import React, { useState, useEffect, Fragment } from 'react';
-import { usersApi, emailHostingApi } from '../lib/api';
+import React, { useState, useEffect, useMemo, Fragment } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { usersApi, emailHostingApi, rbacApi } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
+import { usePermission, Can } from '../context/PermissionContext';
 import { Dialog, Transition, Menu } from '@headlessui/react';
-import { useNavigate } from 'react-router-dom';
 import { 
-  Users, 
-  Plus, 
-  Mail,
-  Shield,
-  MoreVertical,
-  Edit,
-  Trash2,
-  UserCheck,
-  UserX,
-  Link,
-  RefreshCw,
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
-  Eye,
-  EyeOff,
-  Copy,
-  Search,
-  Filter,
-  Grid,
-  List,
-  ChevronDown,
-  ExternalLink,
-  Inbox,
-  Settings,
-  Key,
-  User,
-  Building2,
-  Calendar,
-  MailPlus
+  Users, Plus, Mail, Shield, ShieldCheck, ShieldAlert, Key,
+  Edit, Trash2, UserCheck, UserX, Link as LinkIcon, RefreshCw,
+  CheckCircle, XCircle, AlertTriangle, Eye, EyeOff, Copy,
+  Search, Filter, Grid, List, ChevronDown, ExternalLink,
+  Inbox, Settings, Building2, Calendar, MailPlus, Check,
+  Sliders, Lock, ArrowRight, UserPlus, FileText, Receipt,
+  Truck, ClipboardCheck, Sparkles, X, ChevronRight, History,
+  Info, AlertCircle, Phone, Briefcase
 } from 'lucide-react';
 
-// View Mode Toggle Component
-const ViewModeToggle = ({ viewMode, setViewMode }) => (
-  <div className="flex items-center bg-slate-100 rounded-lg p-1">
-    <button
-      onClick={() => setViewMode('grid')}
-      className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
-    >
-      <Grid size={18} />
-    </button>
-    <button
-      onClick={() => setViewMode('list')}
-      className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
-    >
-      <List size={18} />
-    </button>
-  </div>
-);
-
-// User Card Component for Grid View
-const UserCard = ({ user, onProvision, onLink, onToggleStatus, onDelete, onViewDetails, domains, getRoleBadge }) => {
-  const getInitials = (firstName, lastName) => {
-    return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
-  };
-
-  const getAvatarGradient = (role) => {
-    const gradients = {
-      ADMIN: 'from-purple-400 to-purple-600',
-      MANAGER: 'from-blue-400 to-blue-600',
-      STAFF: 'from-orange-400 to-orange-600'
-    };
-    return gradients[role] || gradients.STAFF;
-  };
-
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg hover:border-slate-300 transition-all group">
-      {/* Header with Avatar and Actions */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getAvatarGradient(user.role)} flex items-center justify-center text-white font-semibold text-lg shadow-sm`}>
-            {getInitials(user.firstName, user.lastName)}
-          </div>
-          <div>
-            <h3 className="font-semibold text-slate-900">{user.firstName} {user.lastName}</h3>
-            <p className="text-sm text-slate-500">{user.jobTitle || 'Team Member'}</p>
-          </div>
-        </div>
-        <Menu as="div" className="relative">
-          <Menu.Button className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors opacity-0 group-hover:opacity-100">
-            <MoreVertical size={16} />
-          </Menu.Button>
-          <Transition
-            as={Fragment}
-            enter="transition ease-out duration-100"
-            enterFrom="transform opacity-0 scale-95"
-            enterTo="transform opacity-100 scale-100"
-            leave="transition ease-in duration-75"
-            leaveFrom="transform opacity-100 scale-100"
-            leaveTo="transform opacity-0 scale-95"
-          >
-            <Menu.Items className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-20">
-              <Menu.Item>
-                {({ active }) => (
-                  <button
-                    onClick={() => onViewDetails(user)}
-                    className={`${active ? 'bg-slate-50' : ''} w-full text-left px-4 py-2.5 text-sm text-slate-700 flex items-center gap-2`}
-                  >
-                    <User size={16} /> View Details
-                  </button>
-                )}
-              </Menu.Item>
-              <Menu.Item>
-                {({ active }) => (
-                  <button
-                    onClick={() => onToggleStatus(user.id, user.isActive)}
-                    className={`${active ? 'bg-slate-50' : ''} w-full text-left px-4 py-2.5 text-sm text-slate-700 flex items-center gap-2`}
-                  >
-                    {user.isActive ? <UserX size={16} /> : <UserCheck size={16} />}
-                    {user.isActive ? 'Deactivate' : 'Activate'}
-                  </button>
-                )}
-              </Menu.Item>
-              <div className="h-px bg-slate-100 my-1" />
-              <Menu.Item>
-                {({ active }) => (
-                  <button
-                    onClick={() => onDelete(user.id)}
-                    className={`${active ? 'bg-red-50' : ''} w-full text-left px-4 py-2.5 text-sm text-red-600 flex items-center gap-2`}
-                  >
-                    <Trash2 size={16} /> Delete
-                  </button>
-                )}
-              </Menu.Item>
-            </Menu.Items>
-          </Transition>
-        </Menu>
-      </div>
-
-      {/* User Info */}
-      <div className="space-y-2 mb-4">
-        <div className="flex items-center gap-2 text-sm text-slate-600">
-          <Mail size={14} className="text-slate-400" />
-          <span className="truncate">{user.email}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {getRoleBadge(user.role)}
-          <span className={`px-2 py-0.5 text-xs rounded-full ${user.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
-            {user.isActive ? 'Active' : 'Inactive'}
-          </span>
-        </div>
-      </div>
-
-      {/* Mailbox Status */}
-      <div className={`p-3 rounded-lg ${user.hasMailbox ? 'bg-green-50 border border-green-200' : 'bg-slate-50 border border-slate-200'}`}>
-        {user.hasMailbox ? (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CheckCircle size={16} className="text-green-500" />
-              <span className="text-sm font-medium text-green-700 truncate max-w-[140px]">{user.primaryEmail}</span>
-            </div>
-            <button 
-              onClick={() => window.location.href = '/mail'}
-              className="p-1.5 bg-green-100 hover:bg-green-200 rounded-lg text-green-600 transition-colors"
-              title="Open in Webmail"
-            >
-              <Inbox size={14} />
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <XCircle size={16} className="text-slate-400" />
-              <span className="text-sm text-slate-500">No mailbox</span>
-            </div>
-            <div className="flex items-center gap-1">
-              {domains.length > 0 && (
-                <button 
-                  onClick={() => onProvision(user)}
-                  className="p-1.5 bg-orange-100 hover:bg-orange-200 rounded-lg text-orange-600 transition-colors"
-                  title="Create Mailbox"
-                >
-                  <MailPlus size={14} />
-                </button>
-              )}
-              <button 
-                onClick={() => onLink(user)}
-                className="p-1.5 bg-blue-100 hover:bg-blue-200 rounded-lg text-blue-600 transition-colors"
-                title="Link Mailbox"
-              >
-                <Link size={14} />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+// Role styling definitions following Apple Human Interface Guidelines
+export const ROLES_METADATA = {
+  ADMIN: {
+    id: 'ADMIN',
+    label: 'Administrator',
+    description: 'Unrestricted superuser access to all workspace systems, banking, domains & permissions',
+    badge: 'bg-purple-50 text-purple-700 border-purple-200/80',
+    dot: 'bg-purple-500',
+    gradient: 'from-purple-500 to-indigo-600',
+    icon: ShieldAlert
+  },
+  MANAGER: {
+    id: 'MANAGER',
+    label: 'Operations Lead',
+    description: 'Full management of documents, invoices, service cards, clients, and team members',
+    badge: 'bg-blue-50 text-blue-700 border-blue-200/80',
+    dot: 'bg-blue-500',
+    gradient: 'from-blue-500 to-cyan-600',
+    icon: ShieldCheck
+  },
+  STAFF: {
+    id: 'STAFF',
+    label: 'Field Technician',
+    description: 'Operational technician access for Service Job Cards, Goods Delivery Notes & Work Email',
+    badge: 'bg-slate-50 text-slate-700 border-slate-200/80',
+    dot: 'bg-slate-400',
+    gradient: 'from-slate-500 to-slate-700',
+    icon: Users
+  },
+  FINANCE: {
+    id: 'FINANCE',
+    label: 'Finance & Billing',
+    description: 'Commercial invoice generation (16% VAT), price quotes, delivery notes & billing records',
+    badge: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
+    dot: 'bg-emerald-500',
+    gradient: 'from-emerald-500 to-teal-600',
+    icon: Receipt
+  },
+  AUDITOR: {
+    id: 'AUDITOR',
+    label: 'Compliance Auditor',
+    description: 'Read-only access across documents, financial statements, and administrative security logs',
+    badge: 'bg-amber-50 text-amber-700 border-amber-200/80',
+    dot: 'bg-amber-500',
+    gradient: 'from-amber-500 to-orange-600',
+    icon: Shield
+  }
 };
 
 const UsersPage = () => {
-  const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  const { hasPermission, isAdmin } = usePermission();
+
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'team';
+  const [activeTab, setActiveTab] = useState(initialTab); // 'team' | 'matrix' | 'mailboxes' | 'audit'
+
+  // Loading & State
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState(null);
+  const [domains, setDomains] = useState([]);
+  const [unlinkedMailboxes, setUnlinkedMailboxes] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
+
+  // RBAC Matrix State
+  const [permissionsCatalog, setPermissionsCatalog] = useState([]);
+  const [roleMatrix, setRoleMatrix] = useState({});
+  const [categories, setCategories] = useState([]);
+  const [savingMatrix, setSavingMatrix] = useState(false);
+  const [selectedRoleSim, setSelectedRoleSim] = useState('STAFF');
+
+  // Slide-over User Permissions Drawer
+  const [selectedUserForRbac, setSelectedUserForRbac] = useState(null);
+  const [userRbacLoading, setUserRbacLoading] = useState(false);
+  const [userRbacData, setUserRbacData] = useState(null);
+  const [userCustomPerms, setUserCustomPerms] = useState([]);
+  const [savingUserPerms, setSavingUserPerms] = useState(false);
+
+  // Modals
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showProvisionModal, setShowProvisionModal] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [domains, setDomains] = useState([]);
-  const [unlinkedMailboxes, setUnlinkedMailboxes] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+
+  // Form State
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    role: 'STAFF',
+    jobTitle: '',
+    phone: '',
+    password: '',
+    isActive: true,
+  });
+  const [showPassword, setShowPassword] = useState(false);
   const [copiedPassword, setCopiedPassword] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterRole, setFilterRole] = useState('all');
-  const [filterMailbox, setFilterMailbox] = useState('all');
-  const [viewMode, setViewMode] = useState('grid');
+  const [filterRole, setFilterRole] = useState('ALL');
+  const [filterMailbox, setFilterMailbox] = useState('ALL');
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
 
+  // Feedback
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  // Initial load
   useEffect(() => {
-    fetchData();
+    fetchInitialData();
   }, []);
 
-  const fetchData = async () => {
+  const fetchInitialData = async () => {
     try {
       setLoading(true);
-      const [usersRes, statsRes, domainsRes] = await Promise.all([
-        usersApi.getAll(),
-        usersApi.getStats(),
-        emailHostingApi.getDomains().catch(() => ({ data: { domains: [] } }))
+      setError('');
+
+      const [usersRes, statsRes, domainsRes, permRes, matrixRes] = await Promise.all([
+        usersApi.getAll().catch(() => ({ data: [] })),
+        usersApi.getStats().catch(() => ({ data: null })),
+        emailHostingApi.getDomains().catch(() => ({ data: { domains: [] } })),
+        rbacApi.getPermissions().catch(() => ({ data: { permissions: [], categories: [] } })),
+        rbacApi.getMatrix().catch(() => ({ data: { matrix: {} } }))
       ]);
+
       setUsers(usersRes.data || []);
       setStats(statsRes.data);
       setDomains(domainsRes.data.domains || []);
-    } catch (error) {
-      console.error('Failed to fetch data:', error);
-      setError('Failed to load users');
+      setPermissionsCatalog(permRes.data.permissions || []);
+      setCategories(permRes.data.categories || []);
+      setRoleMatrix(matrixRes.data.matrix || {});
+    } catch (err) {
+      console.error('Failed to load initial RBAC & User data:', err);
+      setError('Failed to load team data. Please refresh.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAuditLogs = async () => {
+    try {
+      const res = await usersApi.getAuditLogs({ limit: 50 });
+      setAuditLogs(res.data.logs || []);
+    } catch (err) {
+      console.warn('Failed to fetch audit logs:', err);
     }
   };
 
@@ -241,449 +171,540 @@ const UsersPage = () => {
     try {
       const res = await usersApi.getUnlinkedMailboxes();
       setUnlinkedMailboxes(res.data.mailboxes || []);
-    } catch (error) {
-      console.error('Failed to fetch unlinked mailboxes:', error);
+    } catch (err) {
+      console.warn('Failed to fetch unlinked mailboxes:', err);
     }
   };
 
-  const getRoleBadge = (role) => {
-    const colors = {
-      ADMIN: 'bg-purple-100 text-purple-700 border border-purple-200',
-      MANAGER: 'bg-blue-100 text-blue-700 border border-blue-200',
-      STAFF: 'bg-slate-100 text-slate-700 border border-slate-200'
-    };
-    const icons = {
-      ADMIN: <Shield size={12} />,
-      MANAGER: <Building2 size={12} />,
-      STAFF: <User size={12} />
-    };
-    return (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1 ${colors[role] || colors.STAFF}`}>
-        {icons[role]} {role}
-      </span>
-    );
-  };
-
-  const getMailboxBadge = (user) => {
-    if (user.hasMailbox) {
-      return (
-        <div className="flex items-center gap-1.5">
-          <CheckCircle size={14} className="text-green-500" />
-          <span className="text-sm text-green-700">{user.primaryEmail}</span>
-        </div>
-      );
-    }
-    return (
-      <div className="flex items-center gap-1.5 text-slate-400">
-        <XCircle size={14} />
-        <span className="text-sm">No mailbox</span>
-      </div>
-    );
-  };
-
-  // Filter users based on search and filters
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = searchQuery === '' || 
-      `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (user.primaryEmail && user.primaryEmail.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesRole = filterRole === 'all' || user.role === filterRole;
-    const matchesMailbox = filterMailbox === 'all' || 
-      (filterMailbox === 'with' && user.hasMailbox) ||
-      (filterMailbox === 'without' && !user.hasMailbox);
-    
-    return matchesSearch && matchesRole && matchesMailbox;
-  });
-
-  const getStatusBadge = (isActive) => {
-    return isActive ? (
-      <span className="flex items-center gap-1 text-green-600 text-sm">
-        <UserCheck size={14} />
-        Active
-      </span>
-    ) : (
-      <span className="flex items-center gap-1 text-slate-400 text-sm">
-        <UserX size={14} />
-        Inactive
-      </span>
-    );
-  };
-
-  const getInitials = (firstName, lastName) => {
-    return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
-  };
-
-  const handleAddUser = async (formData) => {
+  // Open user permissions drawer
+  const openUserPermissionsDrawer = async (user) => {
+    setSelectedUserForRbac(user);
+    setUserRbacLoading(true);
     try {
-      setError('');
-      await usersApi.create(formData);
-      setSuccess('User created successfully!');
+      const res = await rbacApi.getUserPermissions(user.id);
+      setUserRbacData(res.data);
+      setUserCustomPerms(res.data.customPermissions || []);
+    } catch (err) {
+      console.error('Failed to load user permissions:', err);
+      setError('Failed to fetch individual permissions');
+    } finally {
+      setUserRbacLoading(false);
+    }
+  };
+
+  // Save custom permissions for a user
+  const handleSaveUserPermissions = async () => {
+    if (!selectedUserForRbac) return;
+    try {
+      setSavingUserPerms(true);
+      const res = await rbacApi.updateUserPermissions(selectedUserForRbac.id, userCustomPerms);
+      setUserRbacData(prev => ({
+        ...prev,
+        customPermissions: res.data.customPermissions,
+        effectivePermissions: res.data.effectivePermissions
+      }));
+      setSuccess(`Permissions updated for ${selectedUserForRbac.firstName}`);
+      setTimeout(() => setSuccess(''), 3500);
+      fetchInitialData();
+    } catch (err) {
+      console.error('Failed to update custom permissions:', err);
+      setError(err.response?.data?.message || 'Failed to update user permissions');
+    } finally {
+      setSavingUserPerms(false);
+    }
+  };
+
+  // Toggle role permission in matrix
+  const handleToggleRolePermission = async (role, permissionId) => {
+    if (role === 'ADMIN') return; // Admin is permanent wildcard
+
+    const currentPerms = roleMatrix[role] || [];
+    const isGranted = currentPerms.includes('*') || currentPerms.includes(permissionId);
+
+    let nextPerms;
+    if (isGranted) {
+      nextPerms = currentPerms.filter(p => p !== permissionId && p !== '*');
+    } else {
+      nextPerms = [...currentPerms, permissionId];
+    }
+
+    // Optimistic UI update
+    setRoleMatrix(prev => ({
+      ...prev,
+      [role]: nextPerms
+    }));
+
+    try {
+      await rbacApi.updateMatrix(role, nextPerms);
+      setSuccess(`Updated ${ROLES_METADATA[role]?.label || role} permissions`);
+      setTimeout(() => setSuccess(''), 2500);
+    } catch (err) {
+      console.error('Failed to update matrix:', err);
+      setError('Failed to save permission change to server');
+      // Rollback
+      fetchInitialData();
+    }
+  };
+
+  // Reset role to defaults
+  const handleResetRoleMatrix = async (role) => {
+    try {
+      setSavingMatrix(true);
+      const res = await rbacApi.resetMatrix(role);
+      setRoleMatrix(prev => ({
+        ...prev,
+        [role]: res.data.permissions
+      }));
+      setSuccess(`Reset ${ROLES_METADATA[role]?.label || role} to system defaults`);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      console.error('Failed to reset role:', err);
+      setError('Failed to reset role defaults');
+    } finally {
+      setSavingMatrix(false);
+    }
+  };
+
+  // User CRUD
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await usersApi.create({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+        jobTitle: formData.jobTitle,
+        phone: formData.phone
+      });
       setShowAddModal(false);
-      fetchData();
+      setCopiedPassword(formData.password);
+      setSuccess(`Member account created for ${formData.firstName} ${formData.lastName}`);
+      setFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        role: 'STAFF',
+        jobTitle: '',
+        phone: '',
+        password: '',
+        isActive: true
+      });
+      fetchInitialData();
+    } catch (err) {
+      console.error('Failed to create user:', err);
+      setError(err.response?.data?.error || 'Failed to create user account');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateUser = async (e) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+
+    try {
+      setLoading(true);
+      await usersApi.update(selectedUser.id, {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        role: formData.role,
+        jobTitle: formData.jobTitle,
+        phone: formData.phone,
+        password: formData.password || undefined,
+        isActive: formData.isActive
+      });
+      setShowEditModal(false);
+      setSuccess(`Updated ${formData.firstName} ${formData.lastName}`);
       setTimeout(() => setSuccess(''), 3000);
-    } catch (error) {
-      setError(error.response?.data?.error || 'Failed to create user');
+      fetchInitialData();
+    } catch (err) {
+      console.error('Failed to update user:', err);
+      setError(err.response?.data?.error || 'Failed to update user');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleProvisionMailbox = async (userId, data) => {
+  const handleToggleStatus = async (user) => {
     try {
-      setError('');
-      const res = await usersApi.provisionMailbox(userId, data);
-      setSuccess(`Mailbox created: ${res.data.mailbox.email}`);
-      if (res.data.password) {
-        setCopiedPassword(res.data.password);
-      }
-      setShowProvisionModal(false);
-      fetchData();
-      setTimeout(() => { setSuccess(''); setCopiedPassword(null); }, 10000);
-    } catch (error) {
-      setError(error.response?.data?.error || 'Failed to provision mailbox');
+      const newStatus = user.isActive ? 'INACTIVE' : 'ACTIVE';
+      await usersApi.updateStatus(user.id, newStatus);
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isActive: !user.isActive, status: newStatus } : u));
+      setSuccess(`User status marked as ${newStatus}`);
+      setTimeout(() => setSuccess(''), 2500);
+    } catch (err) {
+      console.error('Failed to toggle status:', err);
+      setError('Failed to update user status');
     }
   };
 
-  const handleLinkMailbox = async (userId, mailboxId) => {
+  const handleDeleteUser = async (user) => {
     try {
-      setError('');
-      await usersApi.linkMailbox(userId, mailboxId);
-      setSuccess('Mailbox linked successfully!');
-      setShowLinkModal(false);
-      fetchData();
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (error) {
-      setError(error.response?.data?.error || 'Failed to link mailbox');
+      await usersApi.delete(user.id);
+      setShowDeleteConfirm(null);
+      setSuccess(`Deleted ${user.firstName} ${user.lastName}`);
+      setTimeout(() => setSuccess(''), 2500);
+      fetchInitialData();
+    } catch (err) {
+      console.error('Failed to delete user:', err);
+      setError(err.response?.data?.error || 'Failed to delete user');
     }
   };
 
-  const handleBulkProvision = async (userIds, domainId) => {
-    try {
-      setError('');
-      const res = await usersApi.bulkProvisionMailboxes(userIds, domainId);
-      setSuccess(`Provisioned ${res.data.successful} of ${res.data.total} mailboxes`);
-      setShowBulkModal(false);
-      setSelectedUsers([]);
-      fetchData();
-      setTimeout(() => setSuccess(''), 5000);
-    } catch (error) {
-      setError(error.response?.data?.error || 'Failed to bulk provision');
+  const generatePassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
+    let pwd = '';
+    for (let i = 0; i < 12; i++) {
+      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-  };
-
-  const handleDeleteUser = async (userId) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
-    try {
-      await usersApi.delete(userId);
-      setSuccess('User deleted successfully');
-      fetchData();
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (error) {
-      setError(error.response?.data?.error || 'Failed to delete user');
-    }
-  };
-
-  const handleToggleStatus = async (userId, currentStatus) => {
-    try {
-      await usersApi.updateStatus(userId, currentStatus ? 'INACTIVE' : 'ACTIVE');
-      fetchData();
-    } catch (error) {
-      setError(error.response?.data?.error || 'Failed to update status');
-    }
+    setFormData(prev => ({ ...prev, password: pwd }));
   };
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
+    setSuccess('Copied to clipboard');
+    setTimeout(() => setSuccess(''), 2000);
   };
 
-  const usersWithoutMailbox = users.filter(u => !u.hasMailbox && u.isActive);
+  const openEditModal = (user) => {
+    setSelectedUser(user);
+    setFormData({
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      email: user.email || '',
+      role: user.role || 'STAFF',
+      jobTitle: user.jobTitle || '',
+      phone: user.phone || '',
+      password: '',
+      isActive: user.isActive !== false
+    });
+    setShowEditModal(true);
+  };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <RefreshCw className="w-8 h-8 text-orange-600 animate-spin" />
-      </div>
-    );
-  }
+  // Filtered members list
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => {
+      const q = searchQuery.toLowerCase();
+      const matchesSearch = !searchQuery || 
+        `${user.firstName} ${user.lastName}`.toLowerCase().includes(q) ||
+        user.email?.toLowerCase().includes(q) ||
+        user.jobTitle?.toLowerCase().includes(q) ||
+        user.primaryEmail?.toLowerCase().includes(q);
+
+      const matchesRole = filterRole === 'ALL' || user.role === filterRole;
+      const matchesMailbox = filterMailbox === 'ALL' ||
+        (filterMailbox === 'WITH' && user.hasMailbox) ||
+        (filterMailbox === 'WITHOUT' && !user.hasMailbox);
+
+      return matchesSearch && matchesRole && matchesMailbox;
+    });
+  }, [users, searchQuery, filterRole, filterMailbox]);
+
+  const usersWithoutMailbox = useMemo(() => {
+    return users.filter(u => !u.hasMailbox);
+  }, [users]);
 
   return (
-    <div className="space-y-6">
-      {/* Alerts */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3 shadow-sm">
-          <div className="p-2 bg-red-100 rounded-lg">
-            <AlertTriangle className="w-5 h-5 text-red-500" />
-          </div>
-          <p className="text-red-700 flex-1">{error}</p>
-          <button onClick={() => setError('')} className="p-1.5 hover:bg-red-100 rounded-lg text-red-500 hover:text-red-700">
-            <XCircle size={18} />
-          </button>
-        </div>
-      )}
-      
+    <div className="space-y-6 pb-36 sm:pb-16 max-w-7xl mx-auto">
+      {/* Toast Feedback */}
       {success && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3 shadow-sm">
-          <div className="p-2 bg-green-100 rounded-lg">
-            <CheckCircle className="w-5 h-5 text-green-500" />
-          </div>
-          <div className="flex-1">
-            <p className="text-green-700 font-medium">{success}</p>
-            {copiedPassword && (
-              <div className="mt-3 p-3 bg-green-100/50 rounded-lg flex items-center gap-3">
-                <Key size={16} className="text-green-600" />
-                <code className="bg-white px-3 py-1.5 rounded-lg text-sm font-mono text-green-800 border border-green-200">{copiedPassword}</code>
-                <button onClick={() => copyToClipboard(copiedPassword)} className="p-1.5 hover:bg-green-200 rounded-lg transition-colors" title="Copy password">
-                  <Copy size={14} className="text-green-600" />
-                </button>
-                <span className="text-xs text-green-600">Copy this password - it won't be shown again!</span>
-              </div>
-            )}
-          </div>
-          <button onClick={() => { setSuccess(''); setCopiedPassword(null); }} className="p-1.5 hover:bg-green-100 rounded-lg text-green-500 hover:text-green-700">
-            <XCircle size={18} />
+        <div className="fixed top-20 right-4 sm:right-8 z-50 flex items-center gap-2 bg-emerald-600 text-white px-4 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-top-4 duration-200">
+          <CheckCircle size={18} />
+          <span className="text-sm font-medium">{success}</span>
+        </div>
+      )}
+      {error && (
+        <div className="fixed top-20 right-4 sm:right-8 z-50 flex items-center gap-2 bg-red-600 text-white px-4 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-top-4 duration-200">
+          <AlertCircle size={18} />
+          <span className="text-sm font-medium">{error}</span>
+          <button onClick={() => setError('')} className="ml-2 hover:opacity-80">
+            <X size={16} />
           </button>
         </div>
       )}
 
-      {/* Modern Header with Gradient */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-6 shadow-xl">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-orange-500/20 rounded-xl">
-              <Users className="w-8 h-8 text-orange-400" />
+      {/* Hero Header - Apple Glass Surface */}
+      <div className="bg-white/80 backdrop-blur-md rounded-2xl sm:rounded-3xl border border-slate-200/80 p-5 sm:p-7 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-xs font-semibold text-orange-600 uppercase tracking-wider">
+              <span>Administration</span>
+              <ChevronRight size={12} className="text-slate-400" />
+              <span>Identity & Security</span>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white">Team Members</h1>
-              <p className="text-slate-400 mt-1">Manage your team and their email accounts</p>
-            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+              Team Directory & Enterprise RBAC
+            </h1>
+            <p className="text-sm text-slate-500">
+              Manage team accounts, corporate mailboxes, and fine-grained access control policies.
+            </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            {usersWithoutMailbox.length > 0 && domains.length > 0 && (
-              <button 
-                onClick={() => { setSelectedUsers(usersWithoutMailbox.map(u => u.id)); setShowBulkModal(true); }}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white/10 backdrop-blur-sm text-white rounded-xl hover:bg-white/20 transition-all border border-white/10"
+
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <button
+              onClick={fetchInitialData}
+              className="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 active:scale-95 transition-all"
+              title="Refresh Directory"
+            >
+              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+            </button>
+
+            <Can perform="users:create">
+              <button
+                onClick={() => {
+                  generatePassword();
+                  setShowAddModal(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white text-sm font-semibold rounded-xl shadow-md shadow-orange-500/20 active:scale-95 transition-all"
               >
-                <MailPlus size={18} />
-                <span className="hidden sm:inline">Provision All</span>
-                <span className="bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full">{usersWithoutMailbox.length}</span>
+                <Plus size={18} />
+                <span>Add Member</span>
               </button>
+            </Can>
+          </div>
+        </div>
+
+        {/* Workspace Quick Stats */}
+        {stats && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-slate-100">
+            <div className="bg-slate-50/80 rounded-xl p-3 sm:p-4">
+              <div className="text-xs font-medium text-slate-500">Total Members</div>
+              <div className="text-xl sm:text-2xl font-bold text-slate-900 mt-1">{stats.total || users.length}</div>
+            </div>
+            <div className="bg-slate-50/80 rounded-xl p-3 sm:p-4">
+              <div className="text-xs font-medium text-slate-500">Active Accounts</div>
+              <div className="text-xl sm:text-2xl font-bold text-emerald-600 mt-1">{stats.active || users.filter(u => u.isActive).length}</div>
+            </div>
+            <div className="bg-slate-50/80 rounded-xl p-3 sm:p-4">
+              <div className="text-xs font-medium text-slate-500">Corporate Mailboxes</div>
+              <div className="text-xl sm:text-2xl font-bold text-blue-600 mt-1">{stats.withMailbox || users.filter(u => u.hasMailbox).length}</div>
+            </div>
+            <div className="bg-slate-50/80 rounded-xl p-3 sm:p-4">
+              <div className="text-xs font-medium text-slate-500">Security Roles</div>
+              <div className="text-xl sm:text-2xl font-bold text-purple-600 mt-1">5 Standard</div>
+            </div>
+          </div>
+        )}
+
+        {/* Apple Segmented Tab Control */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-xl mt-6 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('team')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap active:scale-98 ${
+              activeTab === 'team'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Users size={16} />
+            <span>Team Directory</span>
+            <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200/60 text-slate-700">
+              {users.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('matrix')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap active:scale-98 ${
+              activeTab === 'matrix'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <ShieldCheck size={16} className="text-purple-600" />
+            <span>Roles & Permissions Matrix</span>
+            <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-purple-100 text-purple-700 font-bold">
+              RBAC
+            </span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab('mailboxes');
+              fetchUnlinkedMailboxes();
+            }}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap active:scale-98 ${
+              activeTab === 'mailboxes'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Mail size={16} className="text-blue-600" />
+            <span>Mailbox Provisioning</span>
+            {usersWithoutMailbox.length > 0 && (
+              <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-orange-100 text-orange-700 font-bold">
+                {usersWithoutMailbox.length} pending
+              </span>
             )}
-            <button 
-              onClick={fetchData}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white/10 backdrop-blur-sm text-white rounded-xl hover:bg-white/20 transition-all border border-white/10"
-            >
-              <RefreshCw size={18} />
-            </button>
-            <button 
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg shadow-orange-500/25"
-            >
-              <Plus size={20} />
-              Add Member
-            </button>
-          </div>
-        </div>
+          </button>
 
-        {/* Search and Filters */}
-        <div className="mt-6 flex flex-col md:flex-row items-stretch md:items-center gap-3">
-          <div className="flex-1 relative">
-            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search by name, email or mailbox..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 bg-white/10 border border-white/10 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-transparent"
-            />
-          </div>
-          <div className="flex items-center gap-3">
-            <select
-              value={filterRole}
-              onChange={(e) => setFilterRole(e.target.value)}
-              className="px-4 py-3 bg-white/10 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50"
-            >
-              <option value="all" className="bg-slate-800">All Roles</option>
-              <option value="ADMIN" className="bg-slate-800">Admins</option>
-              <option value="MANAGER" className="bg-slate-800">Managers</option>
-              <option value="STAFF" className="bg-slate-800">Staff</option>
-            </select>
-            <select
-              value={filterMailbox}
-              onChange={(e) => setFilterMailbox(e.target.value)}
-              className="px-4 py-3 bg-white/10 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50"
-            >
-              <option value="all" className="bg-slate-800">All Mailboxes</option>
-              <option value="with" className="bg-slate-800">With Mailbox</option>
-              <option value="without" className="bg-slate-800">Without Mailbox</option>
-            </select>
-            <ViewModeToggle viewMode={viewMode} setViewMode={setViewMode} />
-          </div>
+          <button
+            onClick={() => {
+              setActiveTab('audit');
+              fetchAuditLogs();
+            }}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap active:scale-98 ${
+              activeTab === 'audit'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <History size={16} className="text-slate-500" />
+            <span>Security Audit Trail</span>
+          </button>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg hover:border-slate-300 transition-all group">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-3xl font-bold text-slate-900">{stats?.total || 0}</p>
-              <p className="text-sm text-slate-500 mt-1">Total Members</p>
+      {/* ========================================================== */}
+      {/* TAB 1: TEAM DIRECTORY                                     */}
+      {/* ========================================================== */}
+      {activeTab === 'team' && (
+        <div className="space-y-4">
+          {/* Controls Bar */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search member by name, email, or designation..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200/80 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30 transition-all placeholder:text-slate-400"
+              />
             </div>
-            <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-50 rounded-xl group-hover:scale-110 transition-transform">
-              <Users size={24} className="text-blue-600" />
-            </div>
-          </div>
-          <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full" style={{ width: '100%' }} />
-          </div>
-        </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg hover:border-slate-300 transition-all group">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-3xl font-bold text-slate-900">{stats?.active || 0}</p>
-              <p className="text-sm text-slate-500 mt-1">Active Users</p>
-            </div>
-            <div className="p-3 bg-gradient-to-br from-green-100 to-green-50 rounded-xl group-hover:scale-110 transition-transform">
-              <UserCheck size={24} className="text-green-600" />
-            </div>
-          </div>
-          <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full transition-all" 
-              style={{ width: `${stats?.total ? (stats.active / stats.total * 100) : 0}%` }} 
-            />
-          </div>
-        </div>
+            {/* Filters */}
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              <select
+                value={filterRole}
+                onChange={(e) => setFilterRole(e.target.value)}
+                className="px-3 py-2 text-xs sm:text-sm font-medium bg-slate-50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/30 text-slate-700"
+              >
+                <option value="ALL">All Roles</option>
+                <option value="ADMIN">Admins</option>
+                <option value="MANAGER">Managers</option>
+                <option value="STAFF">Staff</option>
+                <option value="FINANCE">Finance</option>
+                <option value="AUDITOR">Auditors</option>
+              </select>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg hover:border-slate-300 transition-all group">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-3xl font-bold text-slate-900">{stats?.admins || 0}</p>
-              <p className="text-sm text-slate-500 mt-1">Administrators</p>
-            </div>
-            <div className="p-3 bg-gradient-to-br from-purple-100 to-purple-50 rounded-xl group-hover:scale-110 transition-transform">
-              <Shield size={24} className="text-purple-600" />
-            </div>
-          </div>
-          <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-purple-400 to-purple-600 rounded-full transition-all" 
-              style={{ width: `${stats?.total ? (stats.admins / stats.total * 100) : 0}%` }} 
-            />
-          </div>
-        </div>
+              <select
+                value={filterMailbox}
+                onChange={(e) => setFilterMailbox(e.target.value)}
+                className="px-3 py-2 text-xs sm:text-sm font-medium bg-slate-50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/30 text-slate-700"
+              >
+                <option value="ALL">All Mailboxes</option>
+                <option value="WITH">With Mailbox</option>
+                <option value="WITHOUT">Pending Mailbox</option>
+              </select>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg hover:border-slate-300 transition-all group cursor-pointer" onClick={() => setFilterMailbox(filterMailbox === 'with' ? 'all' : 'with')}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-3xl font-bold text-slate-900">{stats?.withMailbox || 0}</p>
-              <p className="text-sm text-slate-500 mt-1">With Mailbox</p>
-            </div>
-            <div className="p-3 bg-gradient-to-br from-orange-100 to-orange-50 rounded-xl group-hover:scale-110 transition-transform">
-              <Mail size={24} className="text-orange-600" />
+              {/* View Toggle */}
+              <div className="flex items-center p-0.5 bg-slate-100 rounded-lg">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-1.5 rounded-md transition-all ${
+                    viewMode === 'grid' ? 'bg-white shadow-xs text-orange-600' : 'text-slate-500'
+                  }`}
+                  title="Grid View"
+                >
+                  <Grid size={16} />
+                </button>
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`p-1.5 rounded-md transition-all ${
+                    viewMode === 'table' ? 'bg-white shadow-xs text-orange-600' : 'text-slate-500'
+                  }`}
+                  title="List View"
+                >
+                  <List size={16} />
+                </button>
+              </div>
             </div>
           </div>
-          <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-orange-400 to-orange-600 rounded-full transition-all" 
-              style={{ width: `${stats?.total ? (stats.withMailbox / stats.total * 100) : 0}%` }} 
-            />
-          </div>
-        </div>
-      </div>
 
-      {/* Grid View */}
-      {viewMode === 'grid' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredUsers.map((user) => (
-            <UserCard
-              key={user.id}
-              user={user}
-              domains={domains}
-              getRoleBadge={getRoleBadge}
-              onProvision={(u) => { setSelectedUser(u); setShowProvisionModal(true); }}
-              onLink={(u) => { setSelectedUser(u); fetchUnlinkedMailboxes(); setShowLinkModal(true); }}
-              onToggleStatus={handleToggleStatus}
-              onDelete={handleDeleteUser}
-              onViewDetails={() => {}}
-            />
-          ))}
-        </div>
-      )}
+          {/* Copied Password Banner */}
+          {copiedPassword && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Key className="text-emerald-600" size={20} />
+                <div>
+                  <p className="text-xs font-semibold text-emerald-800 uppercase tracking-wide">
+                    New Account Password Generated
+                  </p>
+                  <p className="text-sm font-mono text-emerald-900 mt-0.5 select-all">
+                    {copiedPassword}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => copyToClipboard(copiedPassword)}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg active:scale-95 transition-all flex items-center gap-1.5"
+                >
+                  <Copy size={13} />
+                  <span>Copy</span>
+                </button>
+                <button
+                  onClick={() => setCopiedPassword(null)}
+                  className="p-1.5 text-emerald-700 hover:bg-emerald-100 rounded-lg"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          )}
 
-      {/* List View */}
-      {viewMode === 'list' && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
-                  <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Member</th>
-                  <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden md:table-cell">Login Email</th>
-                  <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Mailbox</th>
-                  <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden sm:table-cell">Role</th>
-                  <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden lg:table-cell">Status</th>
-                  <th className="text-right px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${user.role === 'ADMIN' ? 'from-purple-400 to-purple-600' : user.role === 'MANAGER' ? 'from-blue-400 to-blue-600' : 'from-orange-400 to-orange-600'} flex items-center justify-center text-white font-medium text-sm shadow-sm`}>
-                          {(user.firstName?.charAt(0) || '') + (user.lastName?.charAt(0) || '')}
+          {/* Members List - Grid View */}
+          {viewMode === 'grid' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredUsers.map((user) => {
+                const roleMeta = ROLES_METADATA[user.role] || ROLES_METADATA.STAFF;
+                const initials = `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase();
+                const hasOverrides = user.customPermissions && user.customPermissions.length > 0;
+
+                return (
+                  <div
+                    key={user.id}
+                    className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
+                  >
+                    <div>
+                      {/* Card Header */}
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${roleMeta.gradient} flex items-center justify-center text-white font-bold text-base shadow-sm`}>
+                            {initials}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <h3 className="font-bold text-slate-900 text-base leading-tight">
+                                {user.firstName} {user.lastName}
+                              </h3>
+                              {!user.isActive && (
+                                <span className="px-1.5 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-500 rounded">
+                                  INACTIVE
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              {user.jobTitle || 'Team Member'}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-slate-900">{user.firstName} {user.lastName}</p>
-                          <p className="text-sm text-slate-500">{user.jobTitle || 'Team Member'}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 hidden md:table-cell">
-                      <span className="text-slate-600">{user.email}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      {getMailboxBadge(user)}
-                    </td>
-                    <td className="px-6 py-4 hidden sm:table-cell">
-                      {getRoleBadge(user.role)}
-                    </td>
-                    <td className="px-6 py-4 hidden lg:table-cell">
-                      {getStatusBadge(user.isActive)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-1">
-                        {!user.hasMailbox && domains.length > 0 && (
-                          <button 
-                            onClick={() => { setSelectedUser(user); setShowProvisionModal(true); }}
-                            className="p-2 hover:bg-orange-50 rounded-lg text-orange-500 hover:text-orange-600 transition-colors"
-                            title="Create Mailbox"
-                          >
-                            <MailPlus size={16} />
-                          </button>
-                        )}
-                        {!user.hasMailbox && (
-                          <button 
-                            onClick={() => { setSelectedUser(user); fetchUnlinkedMailboxes(); setShowLinkModal(true); }}
-                            className="p-2 hover:bg-blue-50 rounded-lg text-blue-500 hover:text-blue-600 transition-colors"
-                            title="Link Existing Mailbox"
-                          >
-                            <Link size={16} />
-                          </button>
-                        )}
-                        {user.hasMailbox && (
-                          <button 
-                            onClick={() => navigate('/mail')}
-                            className="p-2 hover:bg-green-50 rounded-lg text-green-500 hover:text-green-600 transition-colors"
-                            title="Open Webmail"
-                          >
-                            <ExternalLink size={16} />
-                          </button>
-                        )}
+
+                        {/* Dropdown Menu */}
                         <Menu as="div" className="relative">
-                          <Menu.Button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">
-                            <MoreVertical size={16} />
+                          <Menu.Button className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 active:scale-95 transition-all">
+                            <Sliders size={16} />
                           </Menu.Button>
                           <Transition
                             as={Fragment}
@@ -694,439 +715,1189 @@ const UsersPage = () => {
                             leaveFrom="transform opacity-100 scale-100"
                             leaveTo="transform opacity-0 scale-95"
                           >
-                            <Menu.Items className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-20">
+                            <Menu.Items className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-xl border border-slate-200/80 p-1.5 z-30 focus:outline-none">
                               <Menu.Item>
                                 {({ active }) => (
                                   <button
-                                    onClick={() => handleToggleStatus(user.id, user.isActive)}
-                                    className={`${active ? 'bg-slate-50' : ''} w-full text-left px-4 py-2.5 text-sm text-slate-700 flex items-center gap-2`}
+                                    onClick={() => openUserPermissionsDrawer(user)}
+                                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors ${
+                                      active ? 'bg-purple-50 text-purple-700' : 'text-slate-700'
+                                    }`}
                                   >
-                                    {user.isActive ? <UserX size={16} /> : <UserCheck size={16} />}
-                                    {user.isActive ? 'Deactivate' : 'Activate'}
+                                    <ShieldCheck size={14} className="text-purple-600" />
+                                    <span>Manage Permissions</span>
                                   </button>
                                 )}
                               </Menu.Item>
-                              <div className="h-px bg-slate-100 my-1" />
-                              <Menu.Item>
-                                {({ active }) => (
-                                  <button
-                                    onClick={() => handleDeleteUser(user.id)}
-                                    className={`${active ? 'bg-red-50' : ''} w-full text-left px-4 py-2.5 text-sm text-red-600 flex items-center gap-2`}
-                                  >
-                                    <Trash2 size={16} />
-                                    Delete User
-                                  </button>
-                                )}
-                              </Menu.Item>
+
+                              <Can perform="users:update">
+                                <Menu.Item>
+                                  {({ active }) => (
+                                    <button
+                                      onClick={() => openEditModal(user)}
+                                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors ${
+                                        active ? 'bg-slate-50 text-slate-900' : 'text-slate-700'
+                                      }`}
+                                    >
+                                      <Edit size={14} />
+                                      <span>Edit Details</span>
+                                    </button>
+                                  )}
+                                </Menu.Item>
+                              </Can>
+
+                              <Can perform="users:update">
+                                <Menu.Item>
+                                  {({ active }) => (
+                                    <button
+                                      onClick={() => handleToggleStatus(user)}
+                                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors ${
+                                        active ? 'bg-slate-50 text-slate-900' : 'text-slate-700'
+                                      }`}
+                                    >
+                                      {user.isActive ? (
+                                        <>
+                                          <UserX size={14} className="text-amber-500" />
+                                          <span>Deactivate Account</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <UserCheck size={14} className="text-emerald-500" />
+                                          <span>Activate Account</span>
+                                        </>
+                                      )}
+                                    </button>
+                                  )}
+                                </Menu.Item>
+                              </Can>
+
+                              <Can perform="users:delete">
+                                <Menu.Item>
+                                  {({ active }) => (
+                                    <button
+                                      onClick={() => setShowDeleteConfirm(user)}
+                                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors ${
+                                        active ? 'bg-red-50 text-red-700' : 'text-red-600'
+                                      }`}
+                                    >
+                                      <Trash2 size={14} />
+                                      <span>Delete Member</span>
+                                    </button>
+                                  )}
+                                </Menu.Item>
+                              </Can>
                             </Menu.Items>
                           </Transition>
                         </Menu>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+
+                      {/* Contact coordinates */}
+                      <div className="mt-4 space-y-1.5 text-xs text-slate-600">
+                        <div className="flex items-center gap-2">
+                          <Mail size={13} className="text-slate-400 flex-shrink-0" />
+                          <span className="truncate">{user.email}</span>
+                        </div>
+                        {user.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone size={13} className="text-slate-400 flex-shrink-0" />
+                            <span>{user.phone}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Footer Badges & Actions */}
+                    <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* Role Badge */}
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${roleMeta.badge}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${roleMeta.dot}`}></span>
+                          <span>{roleMeta.label}</span>
+                        </span>
+
+                        {/* Overrides Badge */}
+                        {hasOverrides && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-100 text-purple-700">
+                            <Sparkles size={10} />
+                            <span>+{user.customPermissions.length} overrides</span>
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Mailbox status indicator */}
+                      <div>
+                        {user.hasMailbox ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
+                            <CheckCircle size={12} />
+                            <span>Mailbox Active</span>
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setShowProvisionModal(true);
+                            }}
+                            className="inline-flex items-center gap-1 text-[11px] font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 px-2 py-1 rounded-lg active:scale-95 transition-all"
+                          >
+                            <MailPlus size={12} />
+                            <span>Provision</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Members List - Table View */}
+          {viewMode === 'table' && (
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200/80">
+                      <th className="py-3 px-4">Member</th>
+                      <th className="py-3 px-4">Role & RBAC</th>
+                      <th className="py-3 px-4">Corporate Mailbox</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-sm">
+                    {filteredUsers.map((user) => {
+                      const roleMeta = ROLES_METADATA[user.role] || ROLES_METADATA.STAFF;
+                      const initials = `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase();
+
+                      return (
+                        <tr key={user.id} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${roleMeta.gradient} flex items-center justify-center text-white font-bold text-xs shadow-xs`}>
+                                {initials}
+                              </div>
+                              <div>
+                                <div className="font-semibold text-slate-900">
+                                  {user.firstName} {user.lastName}
+                                </div>
+                                <div className="text-xs text-slate-500">{user.email}</div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${roleMeta.badge}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${roleMeta.dot}`}></span>
+                                <span>{roleMeta.label}</span>
+                              </span>
+                              {user.customPermissions && user.customPermissions.length > 0 && (
+                                <span className="px-1.5 py-0.5 text-[10px] rounded bg-purple-100 text-purple-700 font-bold">
+                                  +{user.customPermissions.length}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-4">
+                            {user.hasMailbox ? (
+                              <div className="flex items-center gap-1.5 text-xs text-slate-700">
+                                <CheckCircle size={14} className="text-emerald-500" />
+                                <span>{user.primaryEmail || user.email}</span>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-slate-400 italic">No mailbox linked</span>
+                            )}
+                          </td>
+
+                          <td className="py-3 px-4">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
+                              user.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {user.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => openUserPermissionsDrawer(user)}
+                                className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                                title="Inspect & Configure Permissions"
+                              >
+                                <ShieldCheck size={16} />
+                              </button>
+                              <button
+                                onClick={() => openEditModal(user)}
+                                className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                title="Edit Details"
+                              >
+                                <Edit size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {filteredUsers.length === 0 && (
-            <div className="text-center py-16">
-              <div className="w-16 h-16 mx-auto bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
-                <Users size={32} className="text-slate-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-slate-700 mb-2">
-                {searchQuery || filterRole !== 'all' || filterMailbox !== 'all' ? 'No matching members' : 'No team members yet'}
-              </h3>
-              <p className="text-slate-500 mb-4">
-                {searchQuery || filterRole !== 'all' || filterMailbox !== 'all' 
-                  ? 'Try adjusting your search or filters' 
-                  : 'Get started by adding your first team member'}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center">
+              <Users className="mx-auto text-slate-300" size={40} />
+              <h3 className="mt-3 font-bold text-slate-900 text-base">No team members found</h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                No users match your search criteria. Try clearing the filter or invite a new member.
               </p>
-              {!searchQuery && filterRole === 'all' && filterMailbox === 'all' && (
-                <button 
-                  onClick={() => setShowAddModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-                >
-                  <Plus size={18} />
-                  Add First Member
-                </button>
-              )}
             </div>
           )}
         </div>
       )}
 
-      {/* Grid View Empty State */}
-      {viewMode === 'grid' && filteredUsers.length === 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
-          <div className="w-16 h-16 mx-auto bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
-            <Users size={32} className="text-slate-400" />
+      {/* ========================================================== */}
+      {/* TAB 2: ENTERPRISE RBAC PERMISSIONS MATRIX                 */}
+      {/* ========================================================== */}
+      {activeTab === 'matrix' && (
+        <div className="space-y-6">
+          {/* Matrix Header & Role Simulator */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <ShieldCheck size={20} className="text-purple-600" />
+                <span>Enterprise Role-Permission Matrix</span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Authorize against granular permissions. Toggling capabilities modifies real-time security policies across the workspace.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-600">Simulate Role:</span>
+              <select
+                value={selectedRoleSim}
+                onChange={(e) => setSelectedRoleSim(e.target.value)}
+                className="px-3 py-1.5 text-xs font-semibold bg-slate-100 border border-slate-200 rounded-xl text-slate-800 focus:outline-none"
+              >
+                {Object.keys(ROLES_METADATA).map(k => (
+                  <option key={k} value={k}>{ROLES_METADATA[k].label}</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <h3 className="text-lg font-semibold text-slate-700 mb-2">
-            {searchQuery || filterRole !== 'all' || filterMailbox !== 'all' ? 'No matching members' : 'No team members yet'}
-          </h3>
-          <p className="text-slate-500 mb-4">
-            {searchQuery || filterRole !== 'all' || filterMailbox !== 'all' 
-              ? 'Try adjusting your search or filters' 
-              : 'Get started by adding your first team member'}
-          </p>
-          {!searchQuery && filterRole === 'all' && filterMailbox === 'all' && (
-            <button 
-              onClick={() => setShowAddModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-            >
-              <Plus size={18} />
-              Add First Member
-            </button>
-          )}
+
+          {/* Interactive Matrix Table */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/90 text-xs font-bold text-slate-700 border-b border-slate-200/80">
+                    <th className="py-4 px-4 min-w-[280px]">Permission Capability</th>
+                    <th className="py-4 px-3 text-center min-w-[110px]">
+                      <div className="flex flex-col items-center">
+                        <span className="text-purple-700">Administrator</span>
+                        <span className="text-[10px] text-slate-400 font-normal">Superuser</span>
+                      </div>
+                    </th>
+                    <th className="py-4 px-3 text-center min-w-[120px]">
+                      <div className="flex flex-col items-center">
+                        <span className="text-blue-700">Operations Lead</span>
+                        <button
+                          onClick={() => handleResetRoleMatrix('MANAGER')}
+                          className="text-[10px] text-slate-400 hover:text-blue-600 underline font-normal"
+                        >
+                          Reset defaults
+                        </button>
+                      </div>
+                    </th>
+                    <th className="py-4 px-3 text-center min-w-[120px]">
+                      <div className="flex flex-col items-center">
+                        <span className="text-slate-800">Technician</span>
+                        <button
+                          onClick={() => handleResetRoleMatrix('STAFF')}
+                          className="text-[10px] text-slate-400 hover:text-slate-600 underline font-normal"
+                        >
+                          Reset defaults
+                        </button>
+                      </div>
+                    </th>
+                    <th className="py-4 px-3 text-center min-w-[120px]">
+                      <div className="flex flex-col items-center">
+                        <span className="text-emerald-700">Finance</span>
+                        <button
+                          onClick={() => handleResetRoleMatrix('FINANCE')}
+                          className="text-[10px] text-slate-400 hover:text-emerald-600 underline font-normal"
+                        >
+                          Reset defaults
+                        </button>
+                      </div>
+                    </th>
+                    <th className="py-4 px-3 text-center min-w-[120px]">
+                      <div className="flex flex-col items-center">
+                        <span className="text-amber-700">Auditor</span>
+                        <button
+                          onClick={() => handleResetRoleMatrix('AUDITOR')}
+                          className="text-[10px] text-slate-400 hover:text-amber-600 underline font-normal"
+                        >
+                          Reset defaults
+                        </button>
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-slate-100 text-sm">
+                  {categories.map((category) => {
+                    const categoryPerms = permissionsCatalog.filter(p => p.category === category);
+                    if (categoryPerms.length === 0) return null;
+
+                    return (
+                      <React.Fragment key={category}>
+                        {/* Section Header */}
+                        <tr className="bg-slate-100/60 font-bold text-xs text-slate-700 tracking-wide">
+                          <td colSpan={6} className="py-2.5 px-4">
+                            <span className="uppercase text-[11px] text-slate-500 font-extrabold mr-2">Module:</span>
+                            {category}
+                          </td>
+                        </tr>
+
+                        {categoryPerms.map((perm) => {
+                          return (
+                            <tr key={perm.id} className="hover:bg-slate-50/50 transition-colors">
+                              {/* Permission Info */}
+                              <td className="py-3 px-4">
+                                <div className="flex items-start gap-2.5">
+                                  <div>
+                                    <div className="font-semibold text-slate-900 text-xs sm:text-sm">
+                                      {perm.label}
+                                    </div>
+                                    <div className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                                      {perm.description}
+                                    </div>
+                                    <div className="mt-1 flex items-center gap-1.5">
+                                      <code className="text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
+                                        {perm.id}
+                                      </code>
+                                      {perm.riskLevel === 'critical' && (
+                                        <span className="text-[9px] font-bold px-1.5 py-0.2 bg-red-100 text-red-700 rounded-full">
+                                          CRITICAL
+                                        </span>
+                                      )}
+                                      {perm.riskLevel === 'elevated' && (
+                                        <span className="text-[9px] font-bold px-1.5 py-0.2 bg-amber-100 text-amber-700 rounded-full">
+                                          ELEVATED
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* ADMIN (Permanent Wildcard) */}
+                              <td className="py-3 px-3 text-center">
+                                <div className="inline-flex items-center justify-center p-1.5 bg-purple-50 text-purple-700 rounded-lg" title="Permanently granted to Administrator">
+                                  <Lock size={15} />
+                                </div>
+                              </td>
+
+                              {/* Roles (MANAGER, STAFF, FINANCE, AUDITOR) */}
+                              {['MANAGER', 'STAFF', 'FINANCE', 'AUDITOR'].map((roleKey) => {
+                                const perms = roleMatrix[roleKey] || [];
+                                const isGranted = perms.includes('*') || perms.includes(perm.id);
+
+                                return (
+                                  <td key={roleKey} className="py-3 px-3 text-center">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleRolePermission(roleKey, perm.id)}
+                                      className={`w-10 h-6 rounded-full p-0.5 transition-colors duration-200 ease-in-out inline-flex items-center active:scale-95 ${
+                                        isGranted ? 'bg-orange-600 justify-end' : 'bg-slate-200 justify-start'
+                                      }`}
+                                      title={`Toggle ${perm.label} for ${roleKey}`}
+                                    >
+                                      <span className="w-5 h-5 rounded-full bg-white shadow-xs"></span>
+                                    </button>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Add User Modal */}
-      <AddUserModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} onSubmit={handleAddUser} />
+      {/* ========================================================== */}
+      {/* TAB 3: MAILBOX PROVISIONING                                */}
+      {/* ========================================================== */}
+      {activeTab === 'mailboxes' && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Mail size={20} className="text-blue-600" />
+                <span>Corporate Email Provisioning</span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Provision custom domain mailboxes (`@exoinafrica.com`) on Stalwart Mail Server with 1 click.
+              </p>
+            </div>
 
-      {/* Provision Mailbox Modal */}
-      <ProvisionMailboxModal
-        isOpen={showProvisionModal}
-        onClose={() => { setShowProvisionModal(false); setSelectedUser(null); }}
-        user={selectedUser}
-        domains={domains}
-        onSubmit={handleProvisionMailbox}
-      />
+            {usersWithoutMailbox.length > 0 && domains.length > 0 && (
+              <button
+                onClick={() => {
+                  setSelectedUsers(usersWithoutMailbox.map(u => u.id));
+                  setShowBulkModal(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-xs active:scale-95 transition-all"
+              >
+                <MailPlus size={16} />
+                <span>Bulk Provision ({usersWithoutMailbox.length} pending)</span>
+              </button>
+            )}
+          </div>
 
-      {/* Link Mailbox Modal */}
-      <LinkMailboxModal
-        isOpen={showLinkModal}
-        onClose={() => { setShowLinkModal(false); setSelectedUser(null); }}
-        user={selectedUser}
-        mailboxes={unlinkedMailboxes}
-        onSubmit={handleLinkMailbox}
-      />
-
-      {/* Bulk Provision Modal */}
-      <BulkProvisionModal
-        isOpen={showBulkModal}
-        onClose={() => { setShowBulkModal(false); setSelectedUsers([]); }}
-        userIds={selectedUsers}
-        userCount={selectedUsers.length}
-        domains={domains}
-        onSubmit={handleBulkProvision}
-      />
-    </div>
-  );
-};
-
-// Add User Modal Component
-const AddUserModal = ({ isOpen, onClose, onSubmit }) => {
-  const [formData, setFormData] = useState({
-    firstName: '', lastName: '', email: '', jobTitle: '', userRole: 'STAFF', password: ''
-  });
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    await onSubmit(formData);
-    setLoading(false);
-    setFormData({ firstName: '', lastName: '', email: '', jobTitle: '', userRole: 'STAFF', password: '' });
-  };
-
-  const generatePassword = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
-    let pass = '';
-    for (let i = 0; i < 12; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
-    setFormData({ ...formData, password: pass });
-    setShowPassword(true);
-  };
-
-  return (
-    <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={onClose}>
-        <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
-        </Transition.Child>
-        <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4">
-            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl transition-all">
-                <Dialog.Title className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                  <Users className="w-5 h-5 text-orange-600" />
-                  Add Team Member
-                </Dialog.Title>
-                <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Pending Users */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs">
+              <h3 className="font-bold text-slate-900 text-sm mb-3 flex items-center gap-2">
+                <AlertCircle size={16} className="text-orange-500" />
+                <span>Team Members Pending Corporate Mailbox ({usersWithoutMailbox.length})</span>
+              </h3>
+              <div className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
+                {usersWithoutMailbox.map((u) => (
+                  <div key={u.id} className="py-3 flex items-center justify-between">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">First Name</label>
-                      <input type="text" value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" required />
+                      <div className="font-semibold text-slate-900 text-xs sm:text-sm">{u.firstName} {u.lastName}</div>
+                      <div className="text-xs text-slate-500">{u.email}</div>
                     </div>
+                    <button
+                      onClick={() => {
+                        setSelectedUser(u);
+                        setShowProvisionModal(true);
+                      }}
+                      className="px-3 py-1.5 text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg active:scale-95 transition-all"
+                    >
+                      Provision
+                    </button>
+                  </div>
+                ))}
+                {usersWithoutMailbox.length === 0 && (
+                  <div className="py-8 text-center text-xs text-slate-400">
+                    All active team members have corporate mailboxes configured!
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Unlinked Mailboxes */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs">
+              <h3 className="font-bold text-slate-900 text-sm mb-3 flex items-center gap-2">
+                <LinkIcon size={16} className="text-purple-500" />
+                <span>Unlinked Mailboxes ({unlinkedMailboxes.length})</span>
+              </h3>
+              <div className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
+                {unlinkedMailboxes.map((m) => (
+                  <div key={m.id} className="py-3 flex items-center justify-between">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
-                      <input type="text" value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" required />
+                      <div className="font-semibold text-slate-900 text-xs sm:text-sm">{m.email}</div>
+                      <div className="text-[11px] text-slate-400">Domain: {m.domain?.domain}</div>
                     </div>
+                    <button
+                      onClick={() => {
+                        setSelectedUser({ id: null, mailboxToLink: m.id });
+                        setShowLinkModal(true);
+                      }}
+                      className="px-3 py-1.5 text-xs font-semibold bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-lg active:scale-95 transition-all"
+                    >
+                      Link to Member
+                    </button>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                    <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" required />
+                ))}
+                {unlinkedMailboxes.length === 0 && (
+                  <div className="py-8 text-center text-xs text-slate-400">
+                    No unlinked mailboxes in the hosting pool.
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Job Title</label>
-                    <input type="text" value={formData.jobTitle} onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================== */}
+      {/* TAB 4: SECURITY AUDIT TRAIL                                */}
+      {/* ========================================================== */}
+      {activeTab === 'audit' && (
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <History size={20} className="text-slate-600" />
+                <span>Security & Authorization Audit Trail</span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Immutable audit trail of member provisionings, status updates, and role modifications.
+              </p>
+            </div>
+            <button
+              onClick={fetchAuditLogs}
+              className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              title="Refresh Logs"
+            >
+              <RefreshCw size={16} />
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-50 font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200/80">
+                  <th className="py-3 px-3">Timestamp</th>
+                  <th className="py-3 px-3">Action</th>
+                  <th className="py-3 px-3">Target Details</th>
+                  <th className="py-3 px-3">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700">
+                {auditLogs.map((log) => (
+                  <tr key={log.id} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-3 px-3 font-mono text-slate-500">
+                      {new Date(log.createdAt).toLocaleString()}
+                    </td>
+                    <td className="py-3 px-3 font-semibold text-slate-900">
+                      {log.action}
+                    </td>
+                    <td className="py-3 px-3">
+                      {log.details || log.targetUserId || '-'}
+                    </td>
+                    <td className="py-3 px-3">
+                      <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded font-semibold text-[10px]">
+                        COMPLETED
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {auditLogs.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="py-8 text-center text-slate-400">
+                      No security audit events recorded recently.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================== */}
+      {/* SLIDE-OVER DRAWER / BOTTOM SHEET: USER PERMISSIONS        */}
+      {/* ========================================================== */}
+      <Transition.Root show={!!selectedUserForRbac} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={() => setSelectedUserForRbac(null)}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-hidden">
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+                <Transition.Child
+                  as={Fragment}
+                  enter="transform transition ease-in-out duration-300"
+                  enterFrom="translate-x-full"
+                  enterTo="translate-x-0"
+                  leave="transform transition ease-in-out duration-200"
+                  leaveFrom="translate-x-0"
+                  leaveTo="translate-x-full"
+                >
+                  <Dialog.Panel className="pointer-events-auto w-screen max-w-md">
+                    <div className="flex h-full flex-col overflow-y-scroll bg-white shadow-2xl">
+                      {/* Header */}
+                      <div className="p-6 bg-slate-50 border-b border-slate-200">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <ShieldCheck className="text-purple-600" size={20} />
+                              <Dialog.Title className="text-lg font-bold text-slate-900">
+                                User Access Capabilities
+                              </Dialog.Title>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-1">
+                              Configure granular permission overrides for this individual account.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            className="rounded-lg p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200/50"
+                            onClick={() => setSelectedUserForRbac(null)}
+                          >
+                            <X size={18} />
+                          </button>
+                        </div>
+
+                        {selectedUserForRbac && (
+                          <div className="mt-4 flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200/80">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
+                              {selectedUserForRbac.firstName?.[0]}{selectedUserForRbac.lastName?.[0]}
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-900 text-sm">
+                                {selectedUserForRbac.firstName} {selectedUserForRbac.lastName}
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                Base Role: <span className="font-semibold text-purple-700">{selectedUserForRbac.role}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Content */}
+                      <div className="p-6 flex-1 space-y-6">
+                        {userRbacLoading ? (
+                          <div className="py-12 text-center">
+                            <RefreshCw className="animate-spin mx-auto text-purple-600" size={24} />
+                            <p className="text-xs text-slate-500 mt-2">Loading member capabilities...</p>
+                          </div>
+                        ) : (
+                          <>
+                            {/* Inherited Role Base */}
+                            <div className="bg-purple-50/60 rounded-xl border border-purple-200/60 p-4">
+                              <h4 className="text-xs font-bold text-purple-900 uppercase tracking-wide flex items-center gap-1.5">
+                                <Info size={14} />
+                                <span>Inherited Role Capabilities</span>
+                              </h4>
+                              <p className="text-xs text-purple-700 mt-1">
+                                Inherited automatically from role <strong>{selectedUserForRbac?.role}</strong>:
+                              </p>
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {userRbacData?.roleBasePermissions?.map(p => (
+                                  <span key={p} className="px-2 py-0.5 text-[11px] font-mono rounded bg-white text-purple-800 border border-purple-200">
+                                    {p}
+                                  </span>
+                                ))}
+                                {userRbacData?.roleBasePermissions?.length === 0 && (
+                                  <span className="text-xs text-slate-400 italic">No base permissions</span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Custom Overrides */}
+                            <div>
+                              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide mb-2">
+                                Individual Custom Overrides
+                              </h4>
+                              <p className="text-xs text-slate-500 mb-3">
+                                Grant specific capabilities that go beyond the user's base role.
+                              </p>
+
+                              <div className="divide-y divide-slate-100 max-h-[45vh] overflow-y-auto border border-slate-200 rounded-xl">
+                                {permissionsCatalog.map((perm) => {
+                                  const isBase = userRbacData?.roleBasePermissions?.includes('*') ||
+                                    userRbacData?.roleBasePermissions?.includes(perm.id);
+                                  const isCustom = userCustomPerms.includes(perm.id);
+
+                                  return (
+                                    <div key={perm.id} className="p-3 flex items-center justify-between hover:bg-slate-50">
+                                      <div className="pr-2">
+                                        <div className="text-xs font-semibold text-slate-900">{perm.label}</div>
+                                        <div className="text-[10px] text-slate-500">{perm.id}</div>
+                                      </div>
+
+                                      {isBase ? (
+                                        <span className="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 text-slate-500 rounded">
+                                          Inherited
+                                        </span>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (isCustom) {
+                                              setUserCustomPerms(prev => prev.filter(p => p !== perm.id));
+                                            } else {
+                                              setUserCustomPerms(prev => [...prev, perm.id]);
+                                            }
+                                          }}
+                                          className={`w-9 h-5 rounded-full p-0.5 transition-colors duration-150 inline-flex items-center active:scale-95 ${
+                                            isCustom ? 'bg-purple-600 justify-end' : 'bg-slate-200 justify-start'
+                                          }`}
+                                        >
+                                          <span className="w-4 h-4 rounded-full bg-white shadow-xs"></span>
+                                        </button>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Footer Actions */}
+                      <div className="p-5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedUserForRbac(null)}
+                          className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200/60 rounded-xl"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSaveUserPermissions}
+                          disabled={savingUserPerms}
+                          className="px-5 py-2 text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white rounded-xl shadow-md active:scale-95 transition-all flex items-center gap-1.5"
+                        >
+                          {savingUserPerms && <RefreshCw size={14} className="animate-spin" />}
+                          <span>Save Overrides</span>
+                        </button>
+                      </div>
+                    </div>
+                  </Dialog.Panel>
+                </Transition.Child>
+              </div>
+            </div>
+          </div>
+        </Dialog>
+      </Transition.Root>
+
+      {/* ========================================================== */}
+      {/* MODAL: ADD NEW MEMBER (APPLE SHEET & RESPONSIVE DIALOG)   */}
+      {/* ========================================================== */}
+      <Transition appear show={showAddModal} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={() => setShowAddModal(false)}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-200"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-150"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex min-h-full items-end sm:items-center justify-center p-0 sm:p-4 text-center">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-200"
+                enterFrom="opacity-0 translate-y-8 sm:scale-95"
+                enterTo="opacity-100 translate-y-0 sm:scale-100"
+                leave="ease-in duration-150"
+                leaveFrom="opacity-100 translate-y-0 sm:scale-100"
+                leaveTo="opacity-0 translate-y-8 sm:scale-95"
+              >
+                <Dialog.Panel className="w-full sm:max-w-lg transform overflow-hidden rounded-t-3xl sm:rounded-3xl bg-white text-left align-bottom sm:align-middle shadow-2xl transition-all border border-slate-100 max-h-[90vh] flex flex-col">
+                  {/* Mobile Grab Handle */}
+                  <div className="sm:hidden flex justify-center pt-3 pb-1">
+                    <div className="w-12 h-1.5 rounded-full bg-slate-300" />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
-                    <select value={formData.userRole} onChange={(e) => setFormData({ ...formData, userRole: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
-                      <option value="STAFF">Staff</option>
-                      <option value="MANAGER">Manager</option>
-                      <option value="ADMIN">Admin</option>
-                    </select>
+
+                  <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                      <Dialog.Title className="text-lg font-bold text-slate-900">
+                        Add Team Member
+                      </Dialog.Title>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Create a verified user account with assigned RBAC privileges.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setShowAddModal(false)}
+                      className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+                    >
+                      <X size={18} />
+                    </button>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-                    <div className="relative">
-                      <input type={showPassword ? 'text' : 'password'} value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className="w-full px-4 py-2 pr-20 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" required minLength={8} />
-                      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="p-1.5 text-slate-400 hover:text-slate-600">
+
+                  <form onSubmit={handleCreateUser} className="p-6 space-y-4 overflow-y-auto">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">First Name *</label>
+                        <input
+                          type="text"
+                          required
+                          value={formData.firstName}
+                          onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                          className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                          placeholder="e.g. Jane"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">Last Name *</label>
+                        <input
+                          type="text"
+                          required
+                          value={formData.lastName}
+                          onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                          className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                          placeholder="e.g. Wanjiku"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Corporate Email Address *</label>
+                      <input
+                        type="email"
+                        required
+                        value={formData.email}
+                        onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                        placeholder="jane@exoinafrica.com"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">Assigned Role *</label>
+                        <select
+                          value={formData.role}
+                          onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
+                          className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                        >
+                          <option value="STAFF">Field Technician (Staff)</option>
+                          <option value="MANAGER">Operations Lead (Manager)</option>
+                          <option value="FINANCE">Finance & Billing</option>
+                          <option value="AUDITOR">Compliance Auditor</option>
+                          <option value="ADMIN">Administrator (Superuser)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">Job Title</label>
+                        <input
+                          type="text"
+                          value={formData.jobTitle}
+                          onChange={(e) => setFormData(prev => ({ ...prev, jobTitle: e.target.value }))}
+                          className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                          placeholder="e.g. Field Engineer"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Phone Number</label>
+                      <input
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                        placeholder="e.g. +254 712 345 678"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-semibold text-slate-700">Account Password *</label>
+                        <button
+                          type="button"
+                          onClick={generatePassword}
+                          className="text-[11px] font-semibold text-orange-600 hover:text-orange-700"
+                        >
+                          Regenerate
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          required
+                          value={formData.password}
+                          onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                          className="w-full pl-3.5 pr-10 py-2.5 text-sm font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        >
                           {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                         </button>
-                        <button type="button" onClick={generatePassword} className="p-1.5 text-slate-400 hover:text-slate-600" title="Generate password">
-                          <RefreshCw size={16} />
-                        </button>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex gap-3 pt-4">
-                    <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">Cancel</button>
-                    <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 flex items-center justify-center gap-2">
-                      {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
-                      Add Member
-                    </button>
-                  </div>
-                </form>
-              </Dialog.Panel>
-            </Transition.Child>
-          </div>
-        </div>
-      </Dialog>
-    </Transition>
-  );
-};
 
-// Provision Mailbox Modal Component
-const ProvisionMailboxModal = ({ isOpen, onClose, user, domains, onSubmit }) => {
-  const [domainId, setDomainId] = useState('');
-  const [localPart, setLocalPart] = useState('');
-  const [customPassword, setCustomPassword] = useState('');
-  const [useAutoPassword, setUseAutoPassword] = useState(true);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (user && domains.length > 0) {
-      const verifiedDomain = domains.find(d => d.isVerified) || domains[0];
-      setDomainId(verifiedDomain?.id || '');
-      const firstName = user.firstName?.toLowerCase().replace(/[^a-z]/g, '') || '';
-      const lastName = user.lastName?.toLowerCase().replace(/[^a-z]/g, '') || '';
-      setLocalPart(`${firstName}.${lastName}`);
-    }
-  }, [user, domains]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    await onSubmit(user.id, { domainId, localPart, password: useAutoPassword ? undefined : customPassword });
-    setLoading(false);
-  };
-
-  const selectedDomain = domains.find(d => d.id === domainId);
-
-  if (!user) return null;
-
-  return (
-    <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={onClose}>
-        <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
-        </Transition.Child>
-        <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4">
-            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl transition-all">
-                <Dialog.Title className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                  <Mail className="w-5 h-5 text-orange-600" />
-                  Create Email Account
-                </Dialog.Title>
-                <p className="mt-2 text-sm text-slate-500">Create an email mailbox for <strong>{user.firstName} {user.lastName}</strong></p>
-                <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Domain</label>
-                    <select value={domainId} onChange={(e) => setDomainId(e.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" required>
-                      {domains.map(d => <option key={d.id} value={d.id}>{d.domain} {d.isVerified ? '✓' : '(unverified)'}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
-                    <div className="flex">
-                      <input type="text" value={localPart} onChange={(e) => setLocalPart(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ''))} className="flex-1 px-4 py-2 border border-r-0 border-slate-200 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-orange-500" required />
-                      <span className="px-4 py-2 bg-slate-100 border border-slate-200 text-slate-600 rounded-r-lg">@{selectedDomain?.domain || 'domain.com'}</span>
+                    <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => setShowAddModal(false)}
+                        className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-5 py-2.5 text-xs font-semibold bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-md active:scale-95 transition-all"
+                      >
+                        Create Member
+                      </button>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" checked={useAutoPassword} onChange={(e) => setUseAutoPassword(e.target.checked)} className="w-4 h-4 text-orange-600 rounded" />
-                      <span className="text-sm text-slate-700">Auto-generate secure password</span>
-                    </label>
-                    {!useAutoPassword && (
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Custom Password</label>
-                        <input type="password" value={customPassword} onChange={(e) => setCustomPassword(e.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" required={!useAutoPassword} minLength={8} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-3 pt-4">
-                    <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">Cancel</button>
-                    <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 flex items-center justify-center gap-2">
-                      {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
-                      Create Mailbox
-                    </button>
-                  </div>
-                </form>
-              </Dialog.Panel>
-            </Transition.Child>
+                  </form>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
           </div>
-        </div>
-      </Dialog>
-    </Transition>
-  );
-};
+        </Dialog>
+      </Transition>
 
-// Link Mailbox Modal Component
-const LinkMailboxModal = ({ isOpen, onClose, user, mailboxes, onSubmit }) => {
-  const [selectedMailboxId, setSelectedMailboxId] = useState('');
-  const [loading, setLoading] = useState(false);
+      {/* ========================================================== */}
+      {/* MODAL: EDIT MEMBER DETAILS                                 */}
+      {/* ========================================================== */}
+      <Transition appear show={showEditModal} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={() => setShowEditModal(false)}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-200"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-150"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs" />
+          </Transition.Child>
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!selectedMailboxId) return;
-    setLoading(true);
-    await onSubmit(user.id, selectedMailboxId);
-    setLoading(false);
-  };
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex min-h-full items-end sm:items-center justify-center p-0 sm:p-4 text-center">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-200"
+                enterFrom="opacity-0 translate-y-8 sm:scale-95"
+                enterTo="opacity-100 translate-y-0 sm:scale-100"
+                leave="ease-in duration-150"
+                leaveFrom="opacity-100 translate-y-0 sm:scale-100"
+                leaveTo="opacity-0 translate-y-8 sm:scale-95"
+              >
+                <Dialog.Panel className="w-full sm:max-w-lg transform overflow-hidden rounded-t-3xl sm:rounded-3xl bg-white text-left align-bottom sm:align-middle shadow-2xl transition-all border border-slate-100 max-h-[90vh] flex flex-col">
+                  {/* Mobile Grab Handle */}
+                  <div className="sm:hidden flex justify-center pt-3 pb-1">
+                    <div className="w-12 h-1.5 rounded-full bg-slate-300" />
+                  </div>
 
-  if (!user) return null;
-
-  return (
-    <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={onClose}>
-        <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
-        </Transition.Child>
-        <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4">
-            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl transition-all">
-                <Dialog.Title className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                  <Link className="w-5 h-5 text-blue-600" />
-                  Link Existing Mailbox
-                </Dialog.Title>
-                <p className="mt-2 text-sm text-slate-500">Link an existing mailbox to <strong>{user.firstName} {user.lastName}</strong></p>
-                <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-                  {mailboxes.length === 0 ? (
-                    <div className="text-center py-8 text-slate-500">
-                      <Mail className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-                      <p>No unlinked mailboxes available</p>
-                      <p className="text-sm mt-1">Create a new mailbox instead</p>
-                    </div>
-                  ) : (
+                  <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">Select Mailbox</label>
-                      <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {mailboxes.map(mb => (
-                          <label key={mb.id} className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${selectedMailboxId === mb.id ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300'}`}>
-                            <input type="radio" name="mailbox" value={mb.id} checked={selectedMailboxId === mb.id} onChange={(e) => setSelectedMailboxId(e.target.value)} className="w-4 h-4 text-blue-600" />
-                            <div>
-                              <p className="font-medium text-slate-900">{mb.email}</p>
-                              {mb.displayName && <p className="text-sm text-slate-500">{mb.displayName}</p>}
-                            </div>
-                          </label>
-                        ))}
+                      <Dialog.Title className="text-lg font-bold text-slate-900">
+                        Edit Member Details
+                      </Dialog.Title>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Update profile, designation, and primary access role.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setShowEditModal(false)}
+                      className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleUpdateUser} className="p-6 space-y-4 overflow-y-auto">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">First Name</label>
+                        <input
+                          type="text"
+                          value={formData.firstName}
+                          onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                          className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">Last Name</label>
+                        <input
+                          type="text"
+                          value={formData.lastName}
+                          onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                          className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                        />
                       </div>
                     </div>
-                  )}
-                  <div className="flex gap-3 pt-4">
-                    <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">Cancel</button>
-                    <button type="submit" disabled={loading || !selectedMailboxId || mailboxes.length === 0} className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2">
-                      {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
-                      Link Mailbox
-                    </button>
-                  </div>
-                </form>
-              </Dialog.Panel>
-            </Transition.Child>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">Role</label>
+                        <select
+                          value={formData.role}
+                          onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
+                          className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                        >
+                          <option value="STAFF">Field Technician (Staff)</option>
+                          <option value="MANAGER">Operations Lead (Manager)</option>
+                          <option value="FINANCE">Finance & Billing</option>
+                          <option value="AUDITOR">Compliance Auditor</option>
+                          <option value="ADMIN">Administrator (Superuser)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">Job Title</label>
+                        <input
+                          type="text"
+                          value={formData.jobTitle}
+                          onChange={(e) => setFormData(prev => ({ ...prev, jobTitle: e.target.value }))}
+                          className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Reset Password (leave empty to keep current)</label>
+                      <input
+                        type="password"
+                        value={formData.password}
+                        onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 text-sm font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                        placeholder="••••••••••••"
+                      />
+                    </div>
+
+                    <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => setShowEditModal(false)}
+                        className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-5 py-2.5 text-xs font-semibold bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-md active:scale-95 transition-all"
+                      >
+                        Save Changes
+                      </button>
+                    </div>
+                  </form>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
           </div>
-        </div>
-      </Dialog>
-    </Transition>
-  );
-};
+        </Dialog>
+      </Transition>
 
-// Bulk Provision Modal Component
-const BulkProvisionModal = ({ isOpen, onClose, userIds, userCount, domains, onSubmit }) => {
-  const [domainId, setDomainId] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (domains.length > 0) {
-      const verifiedDomain = domains.find(d => d.isVerified) || domains[0];
-      setDomainId(verifiedDomain?.id || '');
-    }
-  }, [domains]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    await onSubmit(userIds, domainId);
-    setLoading(false);
-  };
-
-  return (
-    <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={onClose}>
-        <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
-        </Transition.Child>
-        <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4">
-            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl transition-all">
-                <Dialog.Title className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                  <Mail className="w-5 h-5 text-orange-600" />
-                  Bulk Provision Mailboxes
+      {/* ========================================================== */}
+      {/* MODAL: PROVISION MAILBOX FOR USER                          */}
+      {/* ========================================================== */}
+      <Transition appear show={showProvisionModal} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={() => setShowProvisionModal(false)}>
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs" />
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4">
+              <Dialog.Panel className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl border border-slate-100">
+                <Dialog.Title className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <MailPlus className="text-blue-600" size={20} />
+                  <span>Provision Corporate Mailbox</span>
                 </Dialog.Title>
-                <p className="mt-2 text-sm text-slate-500">Create email accounts for <strong>{userCount} users</strong> without mailboxes</p>
-                <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Domain</label>
-                    <select value={domainId} onChange={(e) => setDomainId(e.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" required>
-                      {domains.map(d => <option key={d.id} value={d.id}>{d.domain} {d.isVerified ? '✓' : '(unverified)'}</option>)}
-                    </select>
+                <p className="text-xs text-slate-500 mt-1">
+                  Create a dedicated email account on Stalwart Mail for {selectedUser?.firstName} {selectedUser?.lastName}.
+                </p>
+
+                <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-200/60 text-xs space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Suggested Address:</span>
+                    <span className="font-mono font-semibold text-blue-700">
+                      {selectedUser?.email}
+                    </span>
                   </div>
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                    <p className="text-sm text-orange-800"><strong>Note:</strong> Email addresses will be generated automatically using the format <code className="bg-orange-100 px-1 rounded mx-1">firstname.lastname@domain</code>. Secure passwords will be auto-generated for each account.</p>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Domain:</span>
+                    <span className="font-semibold text-slate-800">
+                      {domains[0]?.domain || 'exoinafrica.com'}
+                    </span>
                   </div>
-                  <div className="flex gap-3 pt-4">
-                    <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">Cancel</button>
-                    <button type="submit" disabled={loading || !domainId} className="flex-1 px-4 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 flex items-center justify-center gap-2">
-                      {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
-                      Create {userCount} Mailboxes
-                    </button>
-                  </div>
-                </form>
+                </div>
+
+                <div className="mt-6 flex items-center justify-end gap-3">
+                  <button
+                    onClick={() => setShowProvisionModal(false)}
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        setLoading(true);
+                        await usersApi.provisionMailbox(selectedUser.id, {
+                          domainId: domains[0]?.id
+                        });
+                        setShowProvisionModal(false);
+                        setSuccess('Mailbox provisioned successfully');
+                        fetchInitialData();
+                      } catch (err) {
+                        setError(err.response?.data?.error || 'Failed to provision mailbox');
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    className="px-5 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md active:scale-95 transition-all"
+                  >
+                    Provision Now
+                  </button>
+                </div>
               </Dialog.Panel>
-            </Transition.Child>
+            </div>
           </div>
-        </div>
-      </Dialog>
-    </Transition>
+        </Dialog>
+      </Transition>
+
+      {/* ========================================================== */}
+      {/* MODAL: DELETE CONFIRMATION                                 */}
+      {/* ========================================================== */}
+      <Transition appear show={!!showDeleteConfirm} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={() => setShowDeleteConfirm(null)}>
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs" />
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4">
+              <Dialog.Panel className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl border border-slate-100 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-3">
+                  <Trash2 size={24} />
+                </div>
+                <Dialog.Title className="text-base font-bold text-slate-900">
+                  Delete Member Account?
+                </Dialog.Title>
+                <p className="text-xs text-slate-500 mt-1">
+                  Are you sure you want to delete {showDeleteConfirm?.firstName} {showDeleteConfirm?.lastName}? This action permanently revokes all access permissions.
+                </p>
+
+                <div className="mt-6 flex items-center justify-center gap-3">
+                  <button
+                    onClick={() => setShowDeleteConfirm(null)}
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleDeleteUser(showDeleteConfirm)}
+                    className="px-5 py-2 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-md active:scale-95 transition-all"
+                  >
+                    Yes, Delete
+                  </button>
+                </div>
+              </Dialog.Panel>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
+    </div>
   );
 };
 

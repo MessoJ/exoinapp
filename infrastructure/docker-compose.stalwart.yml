@@ -1,0 +1,63 @@
+# ==============================================================================
+# STALWART ALL-IN-ONE MAIL SERVER DOCKER COMPOSE CONFIGURATION
+# High-performance, memory-efficient (<100MB RAM), secure Rust-based mail server
+# Replaces heavy multi-container Mailu 2.0 with a single, modern container.
+#
+# Protocols supported:
+# - SMTP (25, 465, 587)
+# - IMAP / IMAPS (143, 993)
+# - JMAP (JSON Mail Access Protocol)
+# - ManageSieve (4190)
+# - Built-in DKIM, SPF, DMARC, ARC signing & validation
+# - Built-in Web Admin UI & REST API on port 8081
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  stalwart-mail:
+    image: stalwartlabs/mail-server:latest
+    container_name: stalwart-mail
+    restart: unless-stopped
+    init: true
+    environment:
+      # Master administrator credentials for initial setup & REST API
+      - STALWART_RECOVERY_ADMIN=${STALWART_ADMIN_USER:-admin}:${STALWART_ADMIN_PASS:-ExoinMail@2026!}
+      # Server public hostname
+      - STALWART_PUBLIC_URL=https://${MAIL_DOMAIN:-mail.exoinafrica.com}
+      - STALWART_HOSTNAME=${MAIL_DOMAIN:-mail.exoinafrica.com}
+    ports:
+      # --- HTTP / Management REST API / Admin WebUI ---
+      # Mapped to 8081 on host to avoid conflict with Nginx web app (port 8080)
+      - "8081:8080"
+      
+      # --- SMTP Mail Transfer ---
+      - "25:25"         # Standard SMTP (server-to-server)
+      - "465:465"       # SMTPS (Implicit TLS)
+      - "587:587"       # SMTP Submission (STARTTLS)
+      - "2525:587"      # Alternative Submission (when port 587 is blocked by ISP)
+
+      # --- IMAP Mail Access ---
+      - "143:143"       # IMAP (STARTTLS)
+      - "993:993"       # IMAPS (Implicit TLS)
+
+      # --- ManageSieve ---
+      - "4190:4190"     # Sieve mail filtering rules
+    volumes:
+      # Persistent mail storage, accounts, and directory database
+      - stalwart-data:/opt/stalwart-mail/data
+      # Configuration files and DKIM keys
+      - stalwart-etc:/opt/stalwart-mail/etc
+    networks:
+      - exoin-net
+
+networks:
+  exoin-net:
+    name: infrastructure_exoin-net
+    external: true
+
+volumes:
+  stalwart-data:
+    name: stalwart-mail-data
+  stalwart-etc:
+    name: stalwart-mail-etc

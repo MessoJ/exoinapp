@@ -15,7 +15,7 @@ const ExoinAccessoriesAlternatives = () => {
     const subTextColor = ghost ? 'text-slate-700' : ((variant === 'dark' || isMonochrome) ? 'text-slate-400' : 'text-slate-500');
 
     return (
-      <div className={`flex items-center ${iconOnly ? 'justify-center' : 'gap-3'}`} style={{ transform: `scale(${scale})` }}>
+      <div className={`inline-flex items-center ${iconOnly ? 'justify-center' : 'gap-3'}`} style={{ transform: `scale(${scale})`, transformOrigin: 'left center' }}>
         <div className="h-12 w-12 relative flex-shrink-0 drop-shadow-lg">
           <svg viewBox="0 0 100 100" fill="none" className="w-full h-full">
             <path d="M15 30 C15 21.7157 21.7157 15 30 15 H55 L55 45 L85 75 H60 C51.7157 75 45 68.2843 45 60 V60 L15 30 Z" fill={fillColor} />
@@ -23,16 +23,16 @@ const ExoinAccessoriesAlternatives = () => {
           </svg>
         </div>
         {!iconOnly && (
-          <div className="flex flex-col justify-between h-11 py-0.5 w-full">
-              <div className="relative leading-none">
+          <div className="inline-flex flex-col justify-between h-11 py-0.5 w-fit">
+              <div className="relative leading-none w-fit">
                 <h1 className={`text-3xl font-black tracking-tighter leading-none m-0 ${textColor}`} style={{ fontFamily: 'sans-serif' }}>
                     EXOIN
                 </h1>
                 <div className={`absolute top-[75%] left-0 w-full h-[1px] ${lineColor}`}></div>
               </div>
-              <div className="flex items-center justify-end gap-2">
-                <div className={`w-1 h-1 rounded-full ${ghost ? 'bg-slate-800' : 'bg-orange-500'}`}></div>
-                <span className={`text-[8px] font-bold tracking-[0.5em] uppercase ${subTextColor}`}>AFRICA</span>
+              <div className="relative h-3 w-full flex items-center justify-end gap-1.5 mt-0.5 pr-0">
+                <div className={`w-1.5 h-1.5 rounded-full ${ghost ? 'bg-slate-800' : 'bg-orange-500'}`}></div>
+                <span className={`text-[7.5px] font-bold tracking-[0.20em] -mr-[0.20em] uppercase leading-none ${subTextColor}`}>AFRICA</span>
               </div>
           </div>
         )}

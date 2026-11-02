@@ -25,12 +25,18 @@ import {
   FileVideo,
   FileAudio,
   PenTool,
+  FileCheck,
+  Search,
+  Receipt,
+  Truck,
+  Wrench,
+  Layers,
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { EmailSignatureTemplate } from '../templates/ExoinEmailSignatures';
-import { signatureApi, authApi } from '../../lib/api';
+import { signatureApi, authApi, documentsApi } from '../../lib/api';
 
 // Email Templates
 const EMAIL_TEMPLATES = [
@@ -101,6 +107,63 @@ const EMAIL_TEMPLATES = [
 <p>To make things right, we are [corrective action]. Please don't hesitate to reach out if you have any concerns.</p>
 <p>Best regards</p>`,
   },
+  {
+    id: 'invoice-notice',
+    name: 'Official Invoice Notice',
+    icon: Receipt,
+    subject: 'Exoin Africa: Official Invoice [INV-XXXX]',
+    body: `<p>Dear [Client Name],</p>
+<p>I hope this message finds you well.</p>
+<p>Please find attached our official tax invoice <strong>[INV-XXXX]</strong> for services and supplies delivered by Exoin Africa.</p>
+<p><strong>Invoice Summary:</strong></p>
+<ul>
+<li><strong>Invoice Number:</strong> [INV-XXXX]</li>
+<li><strong>Total Due:</strong> KES [Amount]</li>
+<li><strong>Payment Terms:</strong> Net 14 Days</li>
+</ul>
+<p>Kindly arrange settlement per the bank details specified in the attached PDF. Should you require any statement reconciliation, please reach out to our finance team.</p>
+<p>Thank you for your valued partnership.</p>
+<p>Warm regards,</p>`,
+  },
+  {
+    id: 'quotation-proposal',
+    name: 'Proposal & Quotation',
+    icon: FileText,
+    subject: 'Exoin Africa: Quotation & Service Scope [QUO-XXXX]',
+    body: `<p>Dear [Client Name],</p>
+<p>Thank you for considering Exoin Africa for your technical infrastructure requirements.</p>
+<p>Please find attached our comprehensive quotation <strong>[QUO-XXXX]</strong> covering the itemized scope of work, technical specifications, and proposed commercial terms.</p>
+<p><strong>Proposal Overview:</strong></p>
+<ul>
+<li><strong>Quote Reference:</strong> [QUO-XXXX]</li>
+<li><strong>Validity:</strong> 30 Days from date of issue</li>
+<li><strong>Deployment Timeline:</strong> Immediate upon approval</li>
+</ul>
+<p>We are available to answer any questions or adapt the scope according to your operational priorities.</p>
+<p>Kind regards,</p>`,
+  },
+  {
+    id: 'delivery-handover',
+    name: 'Delivery Note Confirmation',
+    icon: Truck,
+    subject: 'Exoin Africa: Delivery Note & Handover [DN-XXXX]',
+    body: `<p>Dear [Client Name],</p>
+<p>This is to confirm dispatch and on-site delivery of items per official Delivery Note <strong>[DN-XXXX]</strong>.</p>
+<p>Please review the enclosed signed document certifying all equipment and consignments have been handed over in proper condition.</p>
+<p>Thank you for choosing Exoin Africa Logistics.</p>
+<p>Best regards,</p>`,
+  },
+  {
+    id: 'job-card-report',
+    name: 'Job Card Completion Report',
+    icon: Wrench,
+    subject: 'Exoin Africa: Service Job Card [JC-XXXX]',
+    body: `<p>Dear [Client Name],</p>
+<p>Our engineering service team has finalized the scheduled maintenance and diagnostics on your facility.</p>
+<p>Attached is verified Service Job Card <strong>[JC-XXXX]</strong> detailing tests conducted, parts serviced, and technician sign-off.</p>
+<p>Thank you for partnering with Exoin Africa Technical Services.</p>
+<p>Kind regards,</p>`,
+  },
 ];
 
 // Quill modules configuration
@@ -130,45 +193,62 @@ const quillFormats = [
   'link', 'image',
 ];
 
-// Template Picker Component - Opens UPWARD
+// Template Picker Component - Responsive Bottom Sheet on mobile
 const TemplatePicker = ({ isOpen, onClose, onSelect, anchorRef }) => {
   const [position, setPosition] = useState({ bottom: 0, right: 0 });
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 640);
   const menuRef = useRef(null);
 
   useEffect(() => {
-    if (isOpen && anchorRef?.current) {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && anchorRef?.current && !isMobile) {
       const rect = anchorRef.current.getBoundingClientRect();
       const windowHeight = window.innerHeight;
       const windowWidth = window.innerWidth;
       
-      // Position above the button
       setPosition({
         bottom: windowHeight - rect.top + 8,
-        right: windowWidth - rect.right,
+        right: Math.max(16, windowWidth - rect.right - 100),
       });
     }
-  }, [isOpen, anchorRef]);
+  }, [isOpen, anchorRef, isMobile]);
 
   if (!isOpen) return null;
 
   return (
     <>
-      <div className="fixed inset-0 z-[60]" onClick={onClose} />
+      <div className="fixed inset-0 z-[75] bg-slate-950/50 backdrop-blur-xs animate-in fade-in" onClick={onClose} />
       <motion.div
         ref={menuRef}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 10 }}
-        className="fixed z-[70] w-64 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
-        style={{ bottom: position.bottom, right: position.right }}
+        initial={isMobile ? { y: '100%' } : { opacity: 0, y: 10, scale: 0.95 }}
+        animate={isMobile ? { y: 0 } : { opacity: 1, y: 0, scale: 1 }}
+        exit={isMobile ? { y: '100%' } : { opacity: 0, y: 10, scale: 0.95 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 350 }}
+        className={
+          isMobile
+            ? "fixed inset-x-0 bottom-0 z-[80] rounded-t-3xl max-h-[75vh] bg-white dark:bg-gray-800 shadow-2xl border-t border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden"
+            : "fixed z-[80] w-72 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+        }
+        style={!isMobile ? { bottom: position.bottom, right: position.right } : undefined}
       >
-        <div className="p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
-          <p className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
-            <FileText className="h-4 w-4 text-blue-500" />
-            Email Templates
+        {isMobile && (
+          <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mt-2.5 mb-1" />
+        )}
+        <div className="p-3.5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 flex items-center justify-between">
+          <p className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <FileText className="h-4 w-4 text-orange-500" />
+            Corporate Templates
           </p>
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg text-gray-400">
+            <X className="h-4 w-4" />
+          </button>
         </div>
-        <div className="max-h-72 overflow-y-auto p-1">
+        <div className="max-h-80 overflow-y-auto p-2 space-y-1">
           {EMAIL_TEMPLATES.map((template) => (
             <button
               key={template.id}
@@ -176,12 +256,19 @@ const TemplatePicker = ({ isOpen, onClose, onSelect, anchorRef }) => {
                 onSelect(template);
                 onClose();
               }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-xl hover:bg-orange-50 dark:hover:bg-gray-700 transition-colors group active:scale-98"
             >
-              <template.icon className="h-4 w-4 text-gray-400" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">
-                {template.name}
-              </span>
+              <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0 group-hover:bg-orange-100 dark:group-hover:bg-orange-950/40">
+                <template.icon className="h-4 w-4 text-gray-500 group-hover:text-orange-600 dark:text-gray-300" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="text-xs font-semibold text-gray-900 dark:text-gray-100 block truncate">
+                  {template.name}
+                </span>
+                <span className="text-[10px] text-gray-400 truncate block">
+                  {template.subject}
+                </span>
+              </div>
             </button>
           ))}
         </div>
@@ -190,24 +277,31 @@ const TemplatePicker = ({ isOpen, onClose, onSelect, anchorRef }) => {
   );
 };
 
-// Schedule Send Picker Component - Opens UPWARD
+// Schedule Send Picker Component - Responsive (Bottom sheet on mobile)
 const ScheduleSendPicker = ({ isOpen, onClose, onSchedule, anchorRef }) => {
   const [mode, setMode] = useState('quick');
   const [customDate, setCustomDate] = useState('');
   const [customTime, setCustomTime] = useState('');
   const [position, setPosition] = useState({ bottom: 0, left: 0 });
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 640);
 
   useEffect(() => {
-    if (isOpen && anchorRef?.current) {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && anchorRef?.current && !isMobile) {
       const rect = anchorRef.current.getBoundingClientRect();
       const windowHeight = window.innerHeight;
       
       setPosition({
         bottom: windowHeight - rect.top + 8,
-        left: rect.left,
+        left: Math.max(16, rect.left),
       });
     }
-  }, [isOpen, anchorRef]);
+  }, [isOpen, anchorRef, isMobile]);
 
   const getQuickOptions = () => {
     const now = new Date();
@@ -268,15 +362,23 @@ const ScheduleSendPicker = ({ isOpen, onClose, onSchedule, anchorRef }) => {
 
   return (
     <>
-      <div className="fixed inset-0 z-[60]" onClick={onClose} />
+      <div className="fixed inset-0 z-[75] bg-slate-950/50 backdrop-blur-xs animate-in fade-in" onClick={onClose} />
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 10 }}
-        className="fixed z-[70] w-72 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
-        style={{ bottom: position.bottom, left: position.left }}
+        initial={isMobile ? { y: '100%' } : { opacity: 0, y: 10, scale: 0.95 }}
+        animate={isMobile ? { y: 0 } : { opacity: 1, y: 0, scale: 1 }}
+        exit={isMobile ? { y: '100%' } : { opacity: 0, y: 10, scale: 0.95 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 350 }}
+        className={
+          isMobile
+            ? "fixed inset-x-0 bottom-0 z-[80] rounded-t-3xl max-h-[75vh] bg-white dark:bg-gray-800 shadow-2xl border-t border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden"
+            : "fixed z-[80] w-72 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+        }
+        style={!isMobile ? { bottom: position.bottom, left: position.left } : undefined}
       >
-        <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
+        {isMobile && (
+          <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mt-2.5 mb-1" />
+        )}
+        <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900">
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-blue-500" />
             <span className="font-medium text-gray-900 dark:text-white text-sm">Schedule Send</span>
@@ -369,41 +471,55 @@ const ScheduleSendPicker = ({ isOpen, onClose, onSchedule, anchorRef }) => {
 // Emoji Picker Wrapper Component - Opens UPWARD
 const EmojiPickerPopover = ({ isOpen, onClose, onSelect, anchorRef }) => {
   const [position, setPosition] = useState({ bottom: 0, right: 0 });
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 640);
 
   useEffect(() => {
-    if (isOpen && anchorRef?.current) {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && anchorRef?.current && !isMobile) {
       const rect = anchorRef.current.getBoundingClientRect();
       const windowHeight = window.innerHeight;
       const windowWidth = window.innerWidth;
       
-      // Position above the button
       setPosition({
         bottom: windowHeight - rect.top + 8,
-        right: Math.max(16, windowWidth - rect.right - 175), // Center on button
+        right: Math.max(16, windowWidth - rect.right - 175),
       });
     }
-  }, [isOpen, anchorRef]);
+  }, [isOpen, anchorRef, isMobile]);
 
   if (!isOpen) return null;
 
   return (
     <>
-      <div className="fixed inset-0 z-[60]" onClick={onClose} />
+      <div className="fixed inset-0 z-[75] bg-slate-950/50 backdrop-blur-xs animate-in fade-in" onClick={onClose} />
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 10 }}
-        className="fixed z-[70]"
-        style={{ bottom: position.bottom, right: position.right }}
+        initial={isMobile ? { y: '100%' } : { opacity: 0, y: 10, scale: 0.95 }}
+        animate={isMobile ? { y: 0 } : { opacity: 1, y: 0, scale: 1 }}
+        exit={isMobile ? { y: '100%' } : { opacity: 0, y: 10, scale: 0.95 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 350 }}
+        className={
+          isMobile
+            ? "fixed inset-x-0 bottom-0 z-[80] bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl border-t border-gray-200 dark:border-gray-700 flex flex-col items-center pt-2 pb-6"
+            : "fixed z-[80]"
+        }
+        style={!isMobile ? { bottom: position.bottom, right: position.right } : undefined}
       >
+        {isMobile && (
+          <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-2" />
+        )}
         <EmojiPicker
           onEmojiClick={(emojiData) => {
             onSelect(emojiData.emoji);
             onClose();
           }}
           theme="auto"
-          width={350}
-          height={400}
+          width={isMobile ? Math.min(360, (typeof window !== 'undefined' ? window.innerWidth - 32 : 340)) : 350}
+          height={380}
           previewConfig={{ showPreview: false }}
         />
       </motion.div>
@@ -503,6 +619,165 @@ const UndoSendToast = ({ isVisible, countdown, maxCountdown = 5, onUndo, onCompl
   );
 };
 
+// Document Attachment Picker Component - Opens UPWARD
+const DocumentAttachmentPicker = ({ isOpen, onClose, onSelect, anchorRef }) => {
+  const [position, setPosition] = useState({ bottom: 0, right: 0 });
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 640);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (anchorRef?.current && !isMobile) {
+        const rect = anchorRef.current.getBoundingClientRect();
+        setPosition({
+          bottom: window.innerHeight - rect.top + 8,
+          right: Math.max(16, window.innerWidth - rect.right - 80),
+        });
+      }
+
+      const fetchDocs = async () => {
+        setLoading(true);
+        try {
+          const res = await documentsApi.getAll({ limit: 25 });
+          setDocuments(res.data?.documents || []);
+        } catch (err) {
+          console.error('Failed to load documents for attachment:', err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchDocs();
+    }
+  }, [isOpen, anchorRef, isMobile]);
+
+  if (!isOpen) return null;
+
+  const filteredDocs = documents.filter(doc => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      doc.documentNumber?.toLowerCase().includes(q) ||
+      doc.client?.name?.toLowerCase().includes(q) ||
+      doc.type?.toLowerCase().includes(q)
+    );
+  });
+
+  const getTypeBadge = (type) => {
+    switch (type) {
+      case 'INVOICE':
+        return <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300">INVOICE</span>;
+      case 'QUOTATION':
+        return <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">QUOTE</span>;
+      case 'DELIVERY_NOTE':
+        return <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">DELIVERY</span>;
+      case 'JOB_CARD':
+        return <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300">JOB CARD</span>;
+      default:
+        return <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">{type}</span>;
+    }
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[75] bg-slate-950/50 backdrop-blur-xs animate-in fade-in" onClick={onClose} />
+      <motion.div
+        ref={menuRef}
+        initial={isMobile ? { y: '100%' } : { opacity: 0, y: 10, scale: 0.98 }}
+        animate={isMobile ? { y: 0 } : { opacity: 1, y: 0, scale: 1 }}
+        exit={isMobile ? { y: '100%' } : { opacity: 0, y: 10, scale: 0.98 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 350 }}
+        className={
+          isMobile
+            ? "fixed inset-x-0 bottom-0 z-[80] rounded-t-3xl max-h-[80vh] bg-white dark:bg-gray-800 shadow-2xl border-t border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden"
+            : "fixed z-[80] w-80 sm:w-96 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+        }
+        style={!isMobile ? { bottom: position.bottom, right: position.right } : undefined}
+      >
+        {isMobile && (
+          <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mt-2.5 mb-1" />
+        )}
+        <div className="p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 flex items-center justify-between">
+          <p className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <FileCheck className="h-4 w-4 text-orange-500" />
+            Attach System Document (PDF)
+          </p>
+          <span className="text-[10px] text-gray-400">Exoin Africa</span>
+        </div>
+
+        {/* Search Input */}
+        <div className="p-2 border-b border-gray-100 dark:border-gray-700">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-gray-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by doc # or client..."
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-gray-100 dark:bg-gray-700/60 border border-transparent focus:border-orange-500 focus:bg-white dark:focus:bg-gray-800 rounded-xl outline-none transition-colors"
+            />
+          </div>
+        </div>
+
+        {/* Document List */}
+        <div className="max-h-64 overflow-y-auto p-1.5 divide-y divide-gray-50 dark:divide-gray-700/40">
+          {loading ? (
+            <div className="py-8 text-center text-xs text-gray-400 flex flex-col items-center gap-2">
+              <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+              <span>Loading documents...</span>
+            </div>
+          ) : filteredDocs.length === 0 ? (
+            <div className="py-8 text-center text-xs text-gray-400">
+              No documents found
+            </div>
+          ) : (
+            filteredDocs.map((doc) => (
+              <button
+                key={doc.id}
+                onClick={() => {
+                  onSelect(doc);
+                  onClose();
+                }}
+                className="w-full flex items-center justify-between p-2.5 text-left rounded-xl hover:bg-orange-50/70 dark:hover:bg-gray-700/60 transition-colors group"
+              >
+                <div className="min-w-0 flex-1 pr-2">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-xs font-bold text-gray-900 dark:text-white group-hover:text-orange-600 transition-colors">
+                      {doc.documentNumber}
+                    </span>
+                    {getTypeBadge(doc.type)}
+                  </div>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                    {doc.client?.name || 'Walk-in / General'}
+                  </p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  {doc.total > 0 && (
+                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 block">
+                      KES {Number(doc.total).toLocaleString()}
+                    </span>
+                  )}
+                  <p className="text-[10px] text-gray-400">
+                    {new Date(doc.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </motion.div>
+    </>
+  );
+};
+
 // Main ComposeModal Component
 const ComposeModal = ({
   isOpen,
@@ -544,6 +819,9 @@ const ComposeModal = ({
   const [pendingEmail, setPendingEmail] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
   const [attachDocumentId, setAttachDocumentId] = useState(null);
+  const [showDocPicker, setShowDocPicker] = useState(false);
+  const [attachedDoc, setAttachedDoc] = useState(null);
+  const docPickerButtonRef = useRef(null);
   
   // Signature state
   const [userSignature, setUserSignature] = useState(null);
@@ -683,7 +961,12 @@ const ComposeModal = ({
       if (defaults.to) setToChips([defaults.to]);
       if (defaults.subject) setSubject(defaults.subject);
       if (defaults.body) setBody(defaults.body);
-      if (defaults.attachDocumentId) setAttachDocumentId(defaults.attachDocumentId);
+      if (defaults.attachDocumentId) {
+        setAttachDocumentId(defaults.attachDocumentId);
+        documentsApi.getById(defaults.attachDocumentId)
+          .then(res => { if (res.data) setAttachedDoc(res.data); })
+          .catch(() => {});
+      }
     }
   }, [replyTo, forwardEmail, defaults]);
 
@@ -703,6 +986,8 @@ const ComposeModal = ({
       setScheduledTime(null);
       setShowUndoToast(false);
       setAttachDocumentId(null);
+      setAttachedDoc(null);
+      setShowDocPicker(false);
       setIncludeSignature(true); // Reset to include signature by default
     }
   }, [isOpen]);
@@ -765,6 +1050,57 @@ const ComposeModal = ({
         setBccChips(bccChips.filter((e) => e !== email));
         break;
     }
+  };
+
+  const handleDocSelect = (doc) => {
+    setAttachDocumentId(doc.id);
+    setAttachedDoc(doc);
+    if (!subject) {
+      const typeLabel = doc.type === 'INVOICE' ? 'Invoice' : doc.type === 'DELIVERY_NOTE' ? 'Delivery Note' : doc.type === 'JOB_CARD' ? 'Job Card' : 'Quotation';
+      setSubject(`Exoin Africa: ${typeLabel} ${doc.documentNumber}`);
+    }
+  };
+
+  const handleApplyDocTemplate = (doc) => {
+    const typeLabel = doc.type === 'INVOICE' ? 'Invoice' : doc.type === 'DELIVERY_NOTE' ? 'Delivery Note' : doc.type === 'JOB_CARD' ? 'Job Card' : 'Quotation';
+    const clientName = doc.client?.name || 'Valued Client';
+    const docDate = new Date(doc.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    
+    setSubject(`Exoin Africa: ${typeLabel} ${doc.documentNumber} - ${clientName}`);
+    
+    let templateBody = `<p>Dear ${clientName},</p>
+<p>Please find attached official Exoin Africa <strong>${typeLabel} (${doc.documentNumber})</strong> issued on ${docDate}.</p>`;
+
+    if (doc.type === 'INVOICE' && doc.total) {
+      templateBody += `<p><strong>Invoice Summary:</strong></p>
+<ul>
+<li><strong>Invoice Number:</strong> ${doc.documentNumber}</li>
+<li><strong>Total Amount:</strong> KES ${Number(doc.total).toLocaleString()}</li>
+<li><strong>Status:</strong> ${doc.status || 'ISSUED'}</li>
+</ul>
+<p>Kindly arrange settlement at your earliest convenience per standard payment terms.</p>`;
+    } else if (doc.type === 'DELIVERY_NOTE') {
+      templateBody += `<p><strong>Handover Details:</strong></p>
+<ul>
+<li><strong>Delivery Note:</strong> ${doc.documentNumber}</li>
+<li><strong>Destination:</strong> ${doc.client?.address || 'Client Premises'}</li>
+</ul>
+<p>Please review the enclosed signed delivery note verifying that all items have been inspected and accepted.</p>`;
+    } else if (doc.type === 'JOB_CARD') {
+      templateBody += `<p><strong>Service Summary:</strong></p>
+<ul>
+<li><strong>Job Card Ref:</strong> ${doc.documentNumber}</li>
+<li><strong>Scope:</strong> Maintenance & Verification Service</li>
+</ul>
+<p>Our service technicians have finalized the service as outlined in the attached report.</p>`;
+    } else {
+      templateBody += `<p>Please review the proposal and let us know if you require any modifications or clarifications before approval.</p>`;
+    }
+
+    templateBody += `<p>Should you have any questions, feel free to reply directly to this email.</p>
+<p>Kind regards,</p>`;
+
+    setBody(templateBody);
   };
 
   const handleFileSelect = (e) => {
@@ -988,27 +1324,25 @@ const ComposeModal = ({
   // Gmail-like modal positioning
   const getModalClasses = () => {
     if (isFullscreen) {
-      return 'fixed inset-4 z-50';
+      return 'fixed inset-2 sm:inset-4 z-50';
     }
     if (isMinimized) {
-      return 'fixed bottom-0 right-8 w-[280px] z-50';
+      return 'fixed bottom-0 right-2 sm:right-8 w-[260px] sm:w-[280px] z-50';
     }
-    // If dragged, use absolute positioning
     if (position.x !== null && position.y !== null) {
-      return 'fixed w-[580px] max-w-[95vw] z-50';
+      return 'fixed w-full sm:w-[580px] max-w-[100vw] sm:max-w-[95vw] z-50';
     }
-    // Default: bottom-right like Gmail
-    return 'fixed bottom-0 right-8 w-[580px] max-w-[95vw] z-50';
+    return 'fixed bottom-0 inset-x-0 sm:inset-x-auto sm:right-8 w-full sm:w-[580px] sm:max-w-[95vw] z-50';
   };
   
-  // Get modal style with drag position
   const getModalStyle = () => {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
     const baseStyle = {
-      maxHeight: isFullscreen ? 'calc(100vh - 2rem)' : isMinimized ? '48px' : '70vh',
-      height: isFullscreen ? 'calc(100vh - 2rem)' : isMinimized ? '48px' : 'auto',
+      maxHeight: isFullscreen ? 'calc(100vh - 1rem)' : isMinimized ? '48px' : isMobile ? '88vh' : '72vh',
+      height: isFullscreen ? 'calc(100vh - 1rem)' : isMinimized ? '48px' : isMobile ? '88vh' : 'auto',
     };
     
-    if (position.x !== null && position.y !== null && !isFullscreen && !isMinimized) {
+    if (position.x !== null && position.y !== null && !isFullscreen && !isMinimized && !isMobile) {
       return {
         ...baseStyle,
         left: `${position.x}px`,
@@ -1021,13 +1355,13 @@ const ComposeModal = ({
 
   return (
     <>
-      {/* Backdrop for fullscreen */}
-      {isFullscreen && (
+      {/* Backdrop for mobile sheet & fullscreen */}
+      {(isFullscreen || !isMinimized) && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/30 dark:bg-black/50 z-40"
+          className={`fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-40 transition-opacity ${isFullscreen ? 'block' : 'sm:hidden'}`}
           onClick={onClose}
         />
       )}
@@ -1200,21 +1534,49 @@ const ComposeModal = ({
                 </div>
 
                 {/* Document Attachment Indicator */}
-                {attachDocumentId && (
-                  <div className="px-4 py-2 bg-orange-50 dark:bg-orange-900/20 border-t border-orange-100 dark:border-orange-800 flex-shrink-0">
+                {(attachDocumentId || attachedDoc) && (
+                  <div className="px-4 py-2.5 bg-orange-50/90 dark:bg-orange-950/30 border-t border-b border-orange-100 dark:border-orange-800/60 flex-shrink-0 transition-all duration-200">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
-                        <Paperclip className="h-4 w-4" />
-                        <span className="text-sm font-medium">
-                          Document attached
-                        </span>
+                      <div className="flex items-center gap-2.5 text-orange-700 dark:text-orange-400">
+                        <div className="w-6 h-6 rounded-lg bg-orange-500 text-white flex items-center justify-center text-[10px] font-black shadow-xs">
+                          PDF
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
+                            <span>{attachedDoc?.documentNumber || 'System Document Attached'}</span>
+                            {attachedDoc?.type && (
+                              <span className="text-[10px] px-1.5 py-0.2 bg-orange-100 text-orange-700 dark:bg-orange-900/60 dark:text-orange-300 rounded font-bold uppercase">
+                                {attachedDoc.type.replace('_', ' ')}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                            {attachedDoc?.client?.name ? `Client: ${attachedDoc.client.name}` : 'PDF will be attached and delivered with this message'}
+                          </span>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => setAttachDocumentId(null)}
-                        className="text-sm text-orange-600 dark:text-orange-400 hover:underline"
-                      >
-                        Remove
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {attachedDoc && (
+                          <button
+                            type="button"
+                            onClick={() => handleApplyDocTemplate(attachedDoc)}
+                            className="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:text-orange-700 underline"
+                          >
+                            Insert Cover Note
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAttachDocumentId(null);
+                            setAttachedDoc(null);
+                          }}
+                          className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                          title="Remove attachment"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1337,6 +1699,21 @@ const ComposeModal = ({
                   >
                     <Paperclip className="h-5 w-5 text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300" />
                   </button>
+
+                  {/* Attach System Document (Invoice, Quotation, Delivery Note, Job Card) */}
+                  <button
+                    ref={docPickerButtonRef}
+                    type="button"
+                    onClick={() => setShowDocPicker(!showDocPicker)}
+                    className={`p-2 rounded-full transition-all duration-150 active:scale-95 group ${
+                      attachDocumentId 
+                        ? 'bg-orange-100 dark:bg-orange-950/40 text-orange-600' 
+                        : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500'
+                    }`}
+                    title="Attach System Document (Invoice, Quotation, Delivery Note, Job Card)"
+                  >
+                    <FileCheck className="h-5 w-5 group-hover:text-orange-500" />
+                  </button>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -1392,6 +1769,17 @@ const ComposeModal = ({
       </AnimatePresence>
 
       {/* Popovers - All open UPWARD */}
+      <AnimatePresence>
+        {showDocPicker && (
+          <DocumentAttachmentPicker
+            isOpen={showDocPicker}
+            onClose={() => setShowDocPicker(false)}
+            onSelect={handleDocSelect}
+            anchorRef={docPickerButtonRef}
+          />
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {showTemplates && (
           <TemplatePicker

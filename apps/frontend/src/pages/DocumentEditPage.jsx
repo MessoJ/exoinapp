@@ -1,6 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Save, Loader, Plus, Trash2, AlertCircle, FileText, Receipt, Calculator } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Save, 
+  Loader2, 
+  Plus, 
+  Trash2, 
+  AlertCircle, 
+  FileText, 
+  Receipt, 
+  Calculator,
+  Calendar,
+  Building,
+  DollarSign
+} from 'lucide-react';
 import { documentsApi, clientsApi } from '../lib/api';
 
 const DocumentEditPage = () => {
@@ -38,17 +51,18 @@ const DocumentEditPage = () => {
       const parsedContent = typeof doc.content === 'string' ? JSON.parse(doc.content) : doc.content;
       
       setFormData({
-        title: doc.title || '',
+        title: doc.title || doc.documentNumber || '',
         type: doc.type || 'INVOICE',
         clientId: doc.clientId || '',
         dueDate: doc.dueDate ? new Date(doc.dueDate).toISOString().split('T')[0] : '',
-        notes: parsedContent?.notes || '',
+        notes: parsedContent?.notes || doc.notes || '',
         currency: parsedContent?.currency || 'KES',
-        taxRate: parsedContent?.taxRate || 16,
-        items: parsedContent?.items?.length > 0 ? parsedContent.items : [{ description: '', quantity: 1, unitPrice: 0 }],
+        taxRate: parsedContent?.taxRate !== undefined ? parsedContent.taxRate : 16,
+        items: (doc.items && doc.items.length > 0) ? doc.items : 
+               (parsedContent?.items?.length > 0 ? parsedContent.items : [{ description: '', quantity: 1, unitPrice: 0 }]),
       });
       
-      setClients(clientsResponse.data);
+      setClients(clientsResponse.data?.clients || clientsResponse.data || []);
     } catch (err) {
       setError('Failed to load document');
       console.error(err);
@@ -85,11 +99,11 @@ const DocumentEditPage = () => {
   };
 
   const calculateSubtotal = () => {
-    return formData.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+    return formData.items.reduce((sum, item) => sum + ((Number(item.quantity) || 1) * (Number(item.unitPrice) || 0)), 0);
   };
 
   const calculateTax = () => {
-    return calculateSubtotal() * (formData.taxRate / 100);
+    return calculateSubtotal() * ((Number(formData.taxRate) || 0) / 100);
   };
 
   const calculateTotal = () => {
@@ -99,8 +113,10 @@ const DocumentEditPage = () => {
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-KE', { 
       style: 'currency', 
-      currency: formData.currency 
-    }).format(amount);
+      currency: formData.currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount || 0);
   };
 
   const handleSubmit = async (e) => {
@@ -108,12 +124,7 @@ const DocumentEditPage = () => {
     setError('');
     
     if (!formData.title) {
-      setError('Title is required');
-      return;
-    }
-    
-    if (!formData.clientId) {
-      setError('Please select a client');
+      setError('Title / reference is required');
       return;
     }
     
@@ -128,8 +139,15 @@ const DocumentEditPage = () => {
       const documentData = {
         title: formData.title,
         type: formData.type,
-        clientId: formData.clientId,
+        clientId: formData.clientId || null,
         dueDate: formData.dueDate || null,
+        notes: formData.notes,
+        items: formData.items.map(item => ({
+          description: item.description,
+          quantity: Number(item.quantity) || 1,
+          unitPrice: Number(item.unitPrice) || 0,
+          total: (Number(item.quantity) || 1) * (Number(item.unitPrice) || 0)
+        })),
         content: JSON.stringify({
           items: formData.items,
           notes: formData.notes,
@@ -152,266 +170,243 @@ const DocumentEditPage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader className="animate-spin text-orange-500" size={32} />
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
+        <div className="w-10 h-10 border-3 border-orange-600/30 border-t-orange-600 rounded-full animate-spin"></div>
+        <p className="text-xs font-medium text-slate-400">Loading document editor...</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-6">
+    <div className="max-w-4xl mx-auto space-y-6 antialiased">
+      {/* 1. Header */}
+      <div className="flex items-center gap-3 bg-white/90 backdrop-blur-xl p-4 sm:p-6 rounded-3xl border border-slate-200/80 shadow-xs">
         <Link 
           to={`/documents/${id}`}
-          className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-4"
+          className="p-2 sm:p-2.5 hover:bg-slate-100 rounded-2xl text-slate-500 active:scale-95 transition-all touch-manipulation"
         >
-          <ArrowLeft size={18} />
-          Back to Document
+          <ArrowLeft size={20} />
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900">Edit Document</h1>
-        <p className="text-slate-500 mt-1">Update document details and line items</p>
+        <div>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+            Edit Document
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500">
+            Modify document metadata, line items, and terms
+          </p>
+        </div>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-          <AlertCircle className="text-red-500" size={20} />
-          <p className="text-red-700">{error}</p>
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 text-xs rounded-2xl flex items-center gap-2">
+          <AlertCircle size={16} className="shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Document Details */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <FileText className="text-orange-500" size={20} />
-            Document Details
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Card 1: Details */}
+        <div className="bg-white/90 backdrop-blur-md rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-xs space-y-4">
+          <h2 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2 pb-2 border-b border-slate-100">
+            <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+            Document Specifications
           </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Title <span className="text-red-500">*</span>
-              </label>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Document Title / Number *</label>
               <input
                 type="text"
                 name="title"
                 value={formData.title}
                 onChange={handleChange}
-                placeholder="Enter document title"
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none transition-all"
+                required
               />
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Document Type
-              </label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Document Type</label>
               <select
                 name="type"
                 value={formData.type}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none transition-all"
               >
-                <option value="INVOICE">Invoice</option>
+                <option value="INVOICE">Tax Invoice</option>
                 <option value="QUOTATION">Quotation</option>
+                <option value="DELIVERY_NOTE">Delivery Note</option>
+                <option value="JOB_CARD">Service Job Card</option>
               </select>
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Client <span className="text-red-500">*</span>
-              </label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Assigned Client</label>
               <select
                 name="clientId"
                 value={formData.clientId}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none transition-all"
               >
-                <option value="">Select a client</option>
+                <option value="">Select a client...</option>
                 {clients.map(client => (
                   <option key={client.id} value={client.id}>
-                    {client.name} {client.companyName && `(${client.companyName})`}
+                    {client.name}
                   </option>
                 ))}
               </select>
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Due Date
-              </label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Due Date</label>
               <input
                 type="date"
                 name="dueDate"
                 value={formData.dueDate}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-medium text-slate-900 focus:bg-white focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
               />
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Currency
-              </label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Currency</label>
               <select
                 name="currency"
                 value={formData.currency}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
               >
                 <option value="KES">KES - Kenyan Shilling</option>
                 <option value="USD">USD - US Dollar</option>
                 <option value="EUR">EUR - Euro</option>
-                <option value="GBP">GBP - British Pound</option>
               </select>
             </div>
           </div>
         </div>
 
-        {/* Line Items */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <Receipt className="text-orange-500" size={20} />
-            Line Items
-          </h2>
-          
-          <div className="space-y-3">
-            {/* Header */}
-            <div className="grid grid-cols-12 gap-2 text-sm font-medium text-slate-500 px-2">
-              <div className="col-span-6">Description</div>
-              <div className="col-span-2 text-center">Qty</div>
-              <div className="col-span-3 text-center">Unit Price</div>
-              <div className="col-span-1"></div>
+        {/* Card 2: Line Items */}
+        <div className="bg-white/90 backdrop-blur-md rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-xs space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                Line Items
+              </h2>
+              <p className="text-[11px] text-slate-400">Modify description, rate, and quantity</p>
             </div>
-            
-            {/* Items */}
+            <button
+              type="button"
+              onClick={addItem}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold active:scale-95 transition-all touch-manipulation"
+            >
+              <Plus size={14} /> Add Line Item
+            </button>
+          </div>
+
+          <div className="space-y-3">
             {formData.items.map((item, index) => (
-              <div key={index} className="grid grid-cols-12 gap-2 items-center">
-                <div className="col-span-6">
-                  <input
-                    type="text"
-                    value={item.description}
-                    onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                    placeholder="Item description"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <input
-                    type="number"
-                    min="1"
-                    value={item.quantity}
-                    onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm text-center"
-                  />
-                </div>
-                <div className="col-span-3">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={item.unitPrice}
-                    onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm text-right"
-                  />
-                </div>
-                <div className="col-span-1 flex justify-center">
+              <div key={index} className="p-3.5 bg-slate-50/70 border border-slate-200/60 rounded-2xl space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Description</label>
+                    <input
+                      type="text"
+                      value={item.description}
+                      onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:ring-2 focus:ring-orange-500/20 outline-none"
+                      required
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => removeItem(index)}
                     disabled={formData.items.length === 1}
-                    className="p-1.5 text-slate-400 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="p-2 text-slate-400 hover:text-red-600 rounded-xl hover:bg-white disabled:opacity-30 transition-colors mt-4"
                   >
                     <Trash2 size={16} />
                   </button>
                 </div>
+
+                <div className="grid grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Qty</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={item.quantity}
+                      onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-center text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Rate</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.unitPrice}
+                      onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
+                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-right text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Total</label>
+                    <div className="px-3 py-1.5 bg-slate-100 rounded-xl text-xs font-black text-right text-slate-800">
+                      {formatCurrency(((Number(item.quantity) || 1) * (Number(item.unitPrice) || 0)))}
+                    </div>
+                  </div>
+                </div>
               </div>
             ))}
-            
-            <button
-              type="button"
-              onClick={addItem}
-              className="flex items-center gap-2 text-orange-600 hover:text-orange-700 text-sm font-medium mt-2"
-            >
-              <Plus size={16} />
-              Add Item
-            </button>
+          </div>
+
+          {/* Totals */}
+          <div className="pt-3 border-t border-slate-100 space-y-1.5 text-xs">
+            <div className="flex justify-between text-slate-500">
+              <span>Subtotal</span>
+              <span className="font-semibold text-slate-800">{formatCurrency(calculateSubtotal())}</span>
+            </div>
+            <div className="flex justify-between text-slate-500">
+              <span>VAT ({formData.taxRate}%)</span>
+              <span className="font-semibold text-slate-800">{formatCurrency(calculateTax())}</span>
+            </div>
+            <div className="flex justify-between text-sm font-black text-slate-900 pt-2 border-t border-slate-200">
+              <span>Updated Total</span>
+              <span className="text-orange-600">{formatCurrency(calculateTotal())}</span>
+            </div>
           </div>
         </div>
 
-        {/* Summary */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <Calculator className="text-orange-500" size={20} />
-            Summary
+        {/* Card 3: Notes */}
+        <div className="bg-white/90 backdrop-blur-md rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-xs space-y-3">
+          <h2 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            Notes & Terms
           </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Tax Rate (%)
-              </label>
-              <input
-                type="number"
-                name="taxRate"
-                value={formData.taxRate}
-                onChange={handleChange}
-                min="0"
-                max="100"
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Subtotal</span>
-                <span className="font-medium">{formatCurrency(calculateSubtotal())}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Tax ({formData.taxRate}%)</span>
-                <span className="font-medium">{formatCurrency(calculateTax())}</span>
-              </div>
-              <div className="flex justify-between text-lg font-bold pt-2 border-t border-slate-200">
-                <span>Total</span>
-                <span className="text-orange-600">{formatCurrency(calculateTotal())}</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="mt-4">
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Notes
-            </label>
-            <textarea
-              name="notes"
-              value={formData.notes}
-              onChange={handleChange}
-              placeholder="Additional notes or terms..."
-              rows={3}
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
-            />
-          </div>
+          <textarea
+            name="notes"
+            value={formData.notes}
+            onChange={handleChange}
+            rows={3}
+            className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-4 focus:ring-orange-500/10 outline-none resize-none transition-all"
+          />
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-4">
+        <div className="flex items-center justify-end gap-3 pt-2">
           <Link
             to={`/documents/${id}`}
-            className="px-6 py-2.5 border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors"
+            className="px-5 py-2.5 border border-slate-200 hover:bg-slate-50 rounded-2xl text-xs font-semibold text-slate-600 transition-colors"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-bold shadow-md shadow-slate-900/10 active:scale-95 transition-all disabled:opacity-50 touch-manipulation"
           >
-            {saving ? (
-              <Loader className="animate-spin" size={18} />
-            ) : (
-              <Save size={18} />
-            )}
-            {saving ? 'Saving...' : 'Save Changes'}
+            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            <span>{saving ? 'Updating...' : 'Save Changes'}</span>
           </button>
         </div>
       </form>

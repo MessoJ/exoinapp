@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.exoinafrica.workspace",
+      "sha256_cert_fingerprints": [
+        "14:6D:E9:44:AB:F0:60:73:86:8E:EB:F6:1B:39:62:3C:F6:41:F6:B0:1B:01:C2:59:7E:6D:AF:81:49:7E:00:1E"
+      ]
+    }
+  }
+]

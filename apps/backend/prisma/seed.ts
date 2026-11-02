@@ -9,13 +9,17 @@ async function main() {
   // ==================== COMPANY ====================
   const company = await prisma.company.upsert({
     where: { id: 'exoin-africa-001' },
-    update: {},
+    update: {
+      phone: '0739443244',
+      email: 'info@exoinafrica.com',
+      taxId: 'A015776087P',
+    },
     create: {
       id: 'exoin-africa-001',
       name: 'Exoin Africa',
       tagline: 'Powering African Innovation',
       email: 'info@exoinafrica.com',
-      phone: '+254 700 000 000',
+      phone: '0739443244',
       website: 'https://exoin.africa',
       addressLine1: 'Exoin Tower, Westlands',
       addressLine2: 'Floor 12, Suite A',
@@ -24,7 +28,7 @@ async function main() {
       postalCode: '00100',
       primaryColor: '#1E3A8A',
       secondaryColor: '#F97316',
-      taxId: 'P051234567A',
+      taxId: 'A015776087P',
       registrationNo: 'PVT-2024-12345',
       bankName: 'Equity Bank',
       bankAccount: '1234567890',
@@ -145,6 +149,21 @@ async function main() {
       companyId: company.id,
     },
   });
+  const clientKRA = await prisma.client.upsert({
+    where: { id: 'client-kra' },
+    update: {},
+    create: {
+      id: 'client-kra',
+      name: 'KRA WESTERN REGION OFFICE',
+      email: 'callcenter@kra.go.ke',
+      phone: '+254722856810',
+      contactPerson: 'Facilities / Operations Manager',
+      addressLine1: 'Lake Hub Mall, Kisumu',
+      city: 'Kisumu',
+      country: 'Kenya',
+      companyId: company.id,
+    },
+  });
   console.log('✅ Clients created');
 
   // ==================== SAMPLE INVOICE ====================
@@ -246,6 +265,111 @@ async function main() {
     },
   });
   console.log('✅ Sample Quotation created:', quotation1.documentNumber);
+
+  // ==================== SAMPLE DELIVERY NOTE ====================
+  const deliveryNote1 = await prisma.document.upsert({
+    where: { id: 'dn-2025-0005' },
+    update: {},
+    create: {
+      id: 'dn-2025-0005',
+      documentNumber: 'DN-2025-0005',
+      type: DocumentType.DELIVERY_NOTE,
+      status: DocumentStatus.SENT,
+      issueDate: new Date('2025-11-22'),
+      dueDate: new Date('2025-11-22'),
+      subtotal: 0,
+      taxable: false,
+      taxRate: 0,
+      taxAmount: 0,
+      total: 0,
+      currency: 'KES',
+      notes: 'Delivered in good condition to warehouse receiving dock #2. Please inspect packaging upon receipt.',
+      terms: 'Received the above listed goods in good order, correct quantity, and acceptable condition.',
+      scope: 'LPO-88219 / Project Alpha Delivery',
+      companyId: company.id,
+      clientId: client1.id,
+      createdById: adminUser.id,
+      items: {
+        create: [
+          {
+            name: 'Scout S-1 Autonomous Scrubber',
+            description: 'Scout S-1 Autonomous Floor Scrubber Unit (Serial #EX-9921)',
+            quantity: 2,
+            unitPrice: 0,
+            total: 0,
+          },
+          {
+            name: 'Power Scrub 20L',
+            description: 'Power Scrub™ Industrial Chemical Solution (20L Jerrycans)',
+            quantity: 10,
+            unitPrice: 0,
+            total: 0,
+          },
+          {
+            name: 'Rapid Charging Station',
+            description: 'Docking & 48V Rapid Charging Station for Scout S-1',
+            quantity: 2,
+            unitPrice: 0,
+            total: 0,
+          },
+          {
+            name: 'Maintenance Tool Kit',
+            description: 'Operator Quick-Start Manual & Maintenance Replacement Kit',
+            quantity: 2,
+            unitPrice: 0,
+            total: 0,
+          },
+        ],
+      },
+    },
+  });
+  console.log('✅ Sample Delivery Note created:', deliveryNote1.documentNumber);
+
+  // ==================== SAMPLE SERVICE JOB CARD ====================
+  const jobCard1 = await prisma.document.upsert({
+    where: { id: 'jc-2026-0001' },
+    update: {
+      scope: 'Fumigation and Pest Control Service AT KRA WEBUYE RRU',
+      technicianName: 'Peter Ochieng',
+      notes: 'Safe for normal re-entry after 2 hours. Ventilate treated rooms for 30 minutes before occupying.',
+      terms: 'I confirm that the service specified above was carried out satisfactorily on our premises.',
+      includeSeal: true,
+    },
+    create: {
+      id: 'jc-2026-0001',
+      documentNumber: 'JC-2026-0001',
+      type: DocumentType.JOB_CARD,
+      status: DocumentStatus.SENT,
+      issueDate: new Date('2026-10-31'),
+      dueDate: new Date('2027-01-31'),
+      subtotal: 8491.38,
+      taxable: true,
+      taxRate: 16,
+      taxAmount: 1358.62,
+      total: 9850,
+      currency: 'KES',
+      scope: 'Fumigation and Pest Control Service AT KRA WEBUYE RRU',
+      technicianName: 'Peter Ochieng',
+      notes: 'Safe for normal re-entry after 2 hours. Ventilate treated rooms for 30 minutes before occupying.',
+      terms: 'I confirm that the service specified above was carried out satisfactorily on our premises.',
+      includeSeal: true,
+      companyId: company.id,
+      clientId: clientKRA.id,
+      createdById: staffUser2.id,
+      items: {
+        create: [
+          {
+            name: 'Fumigation and Pest Control Service AT KRA WEBUYE RRU',
+            description: 'Comprehensive pest control, surface residual spraying, and ULV fogging of all office rooms and perimeter',
+            quantity: 1,
+            unitPrice: 9850,
+            total: 9850,
+          },
+        ],
+      },
+    },
+  });
+  console.log('✅ Sample Service Job Card created:', jobCard1.documentNumber);
 
   // ==================== TEMPLATES ====================
   const invoiceTemplate = await prisma.template.upsert({

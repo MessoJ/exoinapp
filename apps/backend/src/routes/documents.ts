@@ -34,9 +34,16 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
       }),
       prisma.document.count({ where })
     ]);
+
+    const formattedDocs = documents.map(doc => ({
+      ...doc,
+      tax: Number(doc.taxAmount),
+      subtotal: Number(doc.subtotal),
+      total: Number(doc.total)
+    }));
     
     return { 
-      documents, 
+      documents: formattedDocs, 
       pagination: {
         total,
         page: Number(page),
@@ -69,7 +76,12 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
       return reply.status(404).send({ error: 'Document not found' });
     }
     
-    return document;
+    return {
+      ...document,
+      tax: Number(document.taxAmount),
+      subtotal: Number(document.subtotal),
+      total: Number(document.total)
+    };
   });
 
   // Create document
@@ -85,6 +97,9 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
       dueDate, 
       notes, 
       terms, 
+      technicianName,
+      includeSeal,
+      signature,
       items,
       scope,
       taxable,
@@ -92,19 +107,29 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
     } = request.body as any;
     
     // Generate document number
-    const prefix = type === 'INVOICE' ? 'INV' : type === 'QUOTATION' ? 'QUO' : type === 'RECEIPT' ? 'REC' : 'LTR';
+    const prefix = type === 'INVOICE' ? 'INV' : type === 'QUOTATION' ? 'QUO' : type === 'DELIVERY_NOTE' ? 'DN' : type === 'JOB_CARD' ? 'JC' : type === 'RECEIPT' ? 'REC' : 'LTR';
     const year = new Date().getFullYear();
     const count = await prisma.document.count({ 
       where: { companyId, type } 
     });
     const documentNumber = `${prefix}-${year}-${String(count + 1).padStart(4, '0')}`;
     
-    // Calculate totals
-    const subtotal = items.reduce((sum: number, item: any) => sum + (item.quantity * item.unitPrice), 0);
+    // Calculate totals safely
+    const itemsList = Array.isArray(items) ? items : [];
+    const computedSubtotal = itemsList.length > 0
+      ? itemsList.reduce((sum: number, item: any) => sum + ((Number(item.quantity) || 1) * (Number(item.unitPrice) || 0)), 0)
+      : (Number((request.body as any).subtotal) || 0);
+
     const isTaxable = taxable !== false;
     const taxRate = isTaxable ? (Number(reqTaxRate) || 16) : 0;
-    const taxAmount = subtotal * (taxRate / 100);
-    const total = subtotal + taxAmount;
+    const taxAmount = ((request.body as any).tax !== undefined && (request.body as any).tax !== null)
+      ? Number((request.body as any).tax)
+      : ((request.body as any).taxAmount !== undefined && (request.body as any).taxAmount !== null)
+        ? Number((request.body as any).taxAmount)
+        : (computedSubtotal * (taxRate / 100));
+    const total = ((request.body as any).total !== undefined && (request.body as any).total !== null)
+      ? Number((request.body as any).total)
+      : (computedSubtotal + taxAmount);
     
     const documentDate = date || issueDate || new Date();
     
@@ -115,7 +140,7 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
         status: DocumentStatus.DRAFT,
         issueDate: new Date(documentDate),
         dueDate: dueDate ? new Date(dueDate) : null,
-        subtotal,
+        subtotal: computedSubtotal,
         taxable: isTaxable,
         taxRate,
         taxAmount,
@@ -123,18 +148,21 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
         scope,
         notes,
         terms,
+        technicianName: technicianName || null,
+        includeSeal: includeSeal !== false,
+        signature: signature || null,
         companyId,
         clientId: clientId || null,
         createdById: userId,
-        items: {
-          create: items.map((item: any) => ({
-            name: item.name,
-            description: item.description,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            total: item.quantity * item.unitPrice,
+        items: itemsList.length > 0 ? {
+          create: itemsList.map((item: any) => ({
+            name: item.name || item.title || item.description || 'Service/Item',
+            description: item.description || item.name || item.title || '',
+            quantity: Number(item.quantity ?? item.qty ?? 1),
+            unitPrice: Number(item.unitPrice ?? item.rate ?? item.price ?? 0),
+            total: (Number(item.quantity ?? item.qty ?? 1)) * (Number(item.unitPrice ?? item.rate ?? item.price ?? 0)),
           }))
-        }
+        } : undefined
       },
       include: {
         client: true,
@@ -142,7 +170,12 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
       }
     });
     
-    return document;
+    return {
+      ...document,
+      tax: Number(document.taxAmount),
+      subtotal: Number(document.subtotal),
+      total: Number(document.total)
+    };
   });
 
   // Update document
@@ -158,6 +191,9 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
       dueDate, 
       notes, 
       terms, 
+      technicianName,
+      includeSeal,
+      signature,
       items,
       scope,
       taxable,
@@ -173,37 +209,46 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
       return reply.status(404).send({ error: 'Document not found' });
     }
     
-    // If items are updated, recalculate totals
-    let updateData: any = { status, clientId, issueDate, dueDate, notes, terms, scope };
+    let updateData: any = { status, clientId, issueDate, dueDate, notes, terms, scope, technicianName };
+    if (includeSeal !== undefined) updateData.includeSeal = includeSeal;
+    if (signature !== undefined) updateData.signature = signature;
     if (taxable !== undefined) updateData.taxable = taxable;
     if (taxRate !== undefined) updateData.taxRate = Number(taxRate);
     
     if (items) {
-      // Delete existing items and create new ones
+      const itemsList = Array.isArray(items) ? items : [];
       await prisma.documentItem.deleteMany({ where: { documentId: id } });
       
       const effectiveTaxable = taxable !== undefined ? taxable : ((existing as any).taxable ?? true);
       const effectiveTaxRate = taxRate !== undefined ? Number(taxRate) : Number(existing.taxRate);
       const actualTaxRate = effectiveTaxable ? effectiveTaxRate : 0;
 
-      const subtotal = items.reduce((sum: number, item: any) => sum + (item.quantity * item.unitPrice), 0);
-      const taxAmount = subtotal * (actualTaxRate / 100);
-      const total = subtotal + taxAmount;
+      const subtotal = itemsList.length > 0
+        ? itemsList.reduce((sum: number, item: any) => sum + ((Number(item.quantity) || 1) * (Number(item.unitPrice) || 0)), 0)
+        : (Number((request.body as any).subtotal) || Number(existing.subtotal));
+      const taxAmount = ((request.body as any).tax !== undefined)
+        ? Number((request.body as any).tax)
+        : ((request.body as any).taxAmount !== undefined)
+          ? Number((request.body as any).taxAmount)
+          : (subtotal * (actualTaxRate / 100));
+      const total = ((request.body as any).total !== undefined)
+        ? Number((request.body as any).total)
+        : (subtotal + taxAmount);
       
       updateData = {
         ...updateData,
         taxAmount,
         total,
         subtotal,
-        items: {
-          create: items.map((item: any) => ({
-            name: item.name,
-            description: item.description,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            total: item.quantity * item.unitPrice,
+        items: itemsList.length > 0 ? {
+          create: itemsList.map((item: any) => ({
+            name: item.name || item.title || item.description || 'Service/Item',
+            description: item.description || item.title || item.name || '',
+            quantity: Number(item.quantity ?? item.qty ?? 1),
+            unitPrice: Number(item.unitPrice ?? item.rate ?? item.price ?? 0),
+            total: (Number(item.quantity ?? item.qty ?? 1)) * (Number(item.unitPrice ?? item.rate ?? item.price ?? 0)),
           }))
-        }
+        } : undefined
       };
     }
     
@@ -216,7 +261,12 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
       }
     });
     
-    return document;
+    return {
+      ...document,
+      tax: Number(document.taxAmount),
+      subtotal: Number(document.subtotal),
+      total: Number(document.total)
+    };
   });
 
   // Delete document
@@ -226,6 +276,7 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
     const { id } = request.params as any;
     const { companyId } = (request as any).user;
     
+    // Verify document exists and belongs to company
     const existing = await prisma.document.findFirst({
       where: { id, companyId }
     });
@@ -234,44 +285,94 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
       return reply.status(404).send({ error: 'Document not found' });
     }
     
+    // Delete items first
+    await prisma.documentItem.deleteMany({ where: { documentId: id } });
+    
+    // Delete document
     await prisma.document.delete({ where: { id } });
     
     return { success: true };
   });
 
-  // Get invoices specifically
-  fastify.get('/invoices', { 
+  // Update document status
+  fastify.patch('/:id/status', { 
     preHandler: [(fastify as any).authenticate] 
   }, async (request, reply) => {
+    const { id } = request.params as any;
+    const { status } = request.body as any;
     const { companyId } = (request as any).user;
     
-    const documents = await prisma.document.findMany({
-      where: { companyId, type: DocumentType.INVOICE },
-      include: {
-        client: true,
-        items: true,
-      },
-      orderBy: { createdAt: 'desc' },
+    const document = await prisma.document.update({
+      where: { id },
+      data: { status }
     });
     
-    return documents;
+    return document;
   });
 
-  // Get quotations specifically
-  fastify.get('/quotations', { 
+  // Duplicate document
+  fastify.post('/:id/duplicate', { 
     preHandler: [(fastify as any).authenticate] 
   }, async (request, reply) => {
-    const { companyId } = (request as any).user;
+    const { id } = request.params as any;
+    const { id: userId, companyId } = (request as any).user;
     
-    const documents = await prisma.document.findMany({
-      where: { companyId, type: DocumentType.QUOTATION },
+    const existing = await prisma.document.findFirst({
+      where: { id, companyId },
+      include: { items: true }
+    });
+    
+    if (!existing) {
+      return reply.status(404).send({ error: 'Document not found' });
+    }
+    
+    // Generate new document number
+    const prefix = existing.type === 'INVOICE' ? 'INV' : existing.type === 'QUOTATION' ? 'QUO' : existing.type === 'DELIVERY_NOTE' ? 'DN' : existing.type === 'JOB_CARD' ? 'JC' : existing.type === 'RECEIPT' ? 'REC' : 'LTR';
+    const year = new Date().getFullYear();
+    const count = await prisma.document.count({ 
+      where: { companyId, type: existing.type } 
+    });
+    const documentNumber = `${prefix}-${year}-${String(count + 1).padStart(4, '0')}`;
+    
+    const newDoc = await prisma.document.create({
+      data: {
+        documentNumber,
+        type: existing.type,
+        status: DocumentStatus.DRAFT,
+        issueDate: new Date(),
+        subtotal: existing.subtotal,
+        taxRate: existing.taxRate,
+        taxAmount: existing.taxAmount,
+        total: existing.total,
+        scope: existing.scope,
+        notes: existing.notes,
+        terms: existing.terms,
+        technicianName: existing.technicianName,
+        includeSeal: existing.includeSeal,
+        companyId,
+        clientId: existing.clientId,
+        createdById: userId,
+        items: {
+          create: existing.items.map(item => ({
+            name: item.name,
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            total: item.total,
+          }))
+        }
+      },
       include: {
         client: true,
         items: true,
-      },
-      orderBy: { createdAt: 'desc' },
+      }
     });
     
-    return documents;
+    return {
+      ...newDoc,
+      tax: Number(newDoc.taxAmount),
+      subtotal: Number(newDoc.subtotal),
+      total: Number(newDoc.total)
+    };
   });
 }

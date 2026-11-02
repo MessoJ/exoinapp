@@ -7,13 +7,15 @@ import {
   Calendar, User, Building, Phone, Mail, MapPin,
   X, Check, Loader2, Copy, Link2, ExternalLink, Printer,
   ChevronRight, ChevronDown, DollarSign, Percent, Hash,
-  AlertCircle, CheckCircle, Clock, PenTool
+  AlertCircle, CheckCircle, Clock, PenTool, Truck, ClipboardCheck, ShieldCheck, ZoomIn, ZoomOut, Maximize2
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { documentsApi, clientsApi, pdfApi } from '../lib/api';
 import { InvoiceTemplate } from '../components/templates/ExoinInvoices';
 import { QuotationTemplate } from '../components/templates/ExoinQuotations';
+import { DeliveryNoteTemplate } from '../components/templates/ExoinDeliveryNote';
+import { JobCardTemplate } from '../components/templates/ExoinJobCard';
 import SignaturePicker from '../components/common/SignaturePicker';
 import useSignatures from '../hooks/useSignatures';
 
@@ -43,6 +45,9 @@ const DocumentPreview = ({ type, data, signature, showTotals, page, totalPages, 
     date: data.issueDate,
     due: data.dueDate,
     expiry: data.dueDate, // For quotation
+    orderRef: data.scope || '',
+    deliveryDate: data.dueDate || data.issueDate,
+    dispatchedBy: data.companyName ? `${data.companyName} Representative` : 'Authorized Officer',
     client: {
       name: data.clientName,
       contactPerson: data.clientContactPerson || '',
@@ -52,13 +57,19 @@ const DocumentPreview = ({ type, data, signature, showTotals, page, totalPages, 
       contact: contactInfo || ''
     },
     scope: data.scope || '',
+    technicianName: data.technicianName || '',
+    nextServiceDate: data.nextServiceDate || '',
+    includeSeal: data.includeSeal !== false,
     taxable: data.taxable !== false,
     taxRate: data.taxRate || 16,
     items: (data.items || []).map(item => ({
-      name: item.name || '',
+      name: item.name || item.description || '',
       desc: item.description,
+      description: item.description,
+      notes: item.notes || '',
       title: item.description, // For quotation
       qty: item.quantity,
+      quantity: item.quantity,
       rate: item.unitPrice,
       total: item.total,
       unit: item.unit || 'Unit'
@@ -77,6 +88,10 @@ const DocumentPreview = ({ type, data, signature, showTotals, page, totalPages, 
 
   if (isInvoice) {
     return <InvoiceTemplate data={templateData} signature={signature} showTotals={showTotals} page={page} totalPages={totalPages} showHeader={showHeader} forExport={forExport} />;
+  } else if (type === 'delivery_note') {
+    return <DeliveryNoteTemplate data={templateData} signature={signature} showTotals={showTotals} page={page} totalPages={totalPages} showHeader={showHeader} forExport={forExport} />;
+  } else if (type === 'job_card') {
+    return <JobCardTemplate data={templateData} signature={signature} showTotals={showTotals} page={page} totalPages={totalPages} showHeader={showHeader} forExport={forExport} />;
   } else {
     return <QuotationTemplate data={templateData} signature={signature} showTotals={showTotals} page={page} totalPages={totalPages} showHeader={showHeader} forExport={forExport} />;
   }
@@ -234,6 +249,25 @@ const FinanceDocsPage = () => {
   const [selectedClient, setSelectedClient] = useState(null);
   const [savedDocument, setSavedDocument] = useState(null);
   const [signature, setSignature] = useState(null);
+  const [mobileScale, setMobileScale] = useState(0.55);
+
+  const autoFitMobileScale = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      if (window.innerWidth < 640) {
+        const availableWidth = window.innerWidth - 24;
+        const fitScale = Math.min(1, Math.max(0.42, availableWidth / 595));
+        setMobileScale(fitScale);
+      } else {
+        setMobileScale(1);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    autoFitMobileScale();
+    window.addEventListener('resize', autoFitMobileScale);
+    return () => window.removeEventListener('resize', autoFitMobileScale);
+  }, [autoFitMobileScale]);
 
   // Load default signature on mount
   useEffect(() => {
@@ -247,18 +281,24 @@ const FinanceDocsPage = () => {
     defaultValues: {
       type: docType.toUpperCase(),
       issueDate: new Date().toISOString().split('T')[0],
-      dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      dueDate: docType === 'job_card' ? '' : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       validUntil: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       taxRate: 16,
       taxable: true, // VAT/Tax toggle
-      scope: '', // Scope of work for quotations
+      scope: '',
+      technicianName: '',
+      clientSiteAddress: '',
+      clientContactPerson: '',
       companyName: 'Exoin Africa Ltd.',
-      companyAddress: 'Nairobi HQ • Westlands Tower',
-      companyTaxId: 'VAT: P051...Z',
+      companyAddress: '48706, 00100, Nairobi, Kenya',
+      companyTaxId: 'PIN: A015776087P',
+      companyPhone: '0739443244',
+      companyEmail: 'info@exoinafrica.com',
       bankName: 'Equity Bank Kenya',
       bankAccount: '0000-0000-0000',
       notes: '',
-      terms: '',
+      terms: docType === 'job_card' ? 'I confirm that the service specified above was carried out satisfactorily on our premises.' : '',
+      includeSeal: true,
       items: [{ name: '', description: '', quantity: 1, unitPrice: 0, unit: 'Unit', notes: '' }]
     }
   });
@@ -267,6 +307,9 @@ const FinanceDocsPage = () => {
   const watchItems = watch('items');
   const watchTaxRate = watch('taxRate');
   const watchTaxable = watch('taxable');
+  const watchCarrier = watch('carrier');
+  const watchTechnician = watch('technicianName');
+  const watchDueDate = watch('dueDate');
 
   // Calculate totals
   const calculateTotals = useCallback(() => {
@@ -317,6 +360,7 @@ const FinanceDocsPage = () => {
           setValue('notes', doc.notes);
           setValue('items', doc.items || []);
           if (doc.client) setSelectedClient(doc.client);
+          if (doc.signature) setSignature(doc.signature);
           setSavedDocument(doc);
         } catch (error) {
           console.error('Failed to load document:', error);
@@ -342,18 +386,49 @@ const FinanceDocsPage = () => {
       fullAddress = [addressLines, cityCountry].filter(Boolean).join(', ');
     }
     
+    const clientContact = formData.clientContactPerson || selectedClient?.contactPerson || '';
+    const clientSite = formData.clientSiteAddress || fullAddress || selectedClient?.address || '';
+
     return {
       ...formData,
-      documentNumber: savedDocument?.documentNumber || `${docType === 'invoice' ? 'INV' : 'QUO'}-${new Date().getFullYear()}-XXXX`,
+      documentNumber: savedDocument?.documentNumber || `${docType === 'invoice' ? 'INV' : docType === 'delivery_note' ? 'DN' : docType === 'job_card' ? 'JC' : 'QUO'}-${new Date().getFullYear()}-XXXX`,
+      client: {
+        name: selectedClient?.name || 'Client Name',
+        address: clientSite,
+        addressLine1: clientSite,
+        contactPerson: clientContact,
+        phone: selectedClient?.phone || '',
+        email: selectedClient?.email || '',
+        taxId: selectedClient?.taxId || ''
+      },
       clientName: selectedClient?.name || 'Client Name',
-      clientContactPerson: selectedClient?.contactPerson || '',
-      clientAddress: fullAddress || selectedClient?.address || '',
+      clientContactPerson: clientContact,
+      clientAddress: clientSite,
       clientCity: selectedClient?.city || '',
       clientCountry: selectedClient?.country || '',
       clientPhone: selectedClient?.phone || '',
       clientEmail: selectedClient?.email || '',
-      items: watchItems.map(item => ({
+      companyPhone: formData.companyPhone || '0739443244',
+      companyEmail: formData.companyEmail || 'info@exoinafrica.com',
+      technicianName: formData.technicianName || '',
+      dispatchedBy: formData.technicianName || formData.dispatchedBy || 'Peter Ochieng (Operations)',
+      carrier: formData.carrier || 'Direct Fleet',
+      vehicleReg: formData.carrier || 'Direct Fleet',
+      orderRef: formData.scope || formData.orderRef || 'LPO-99120',
+      signature: signature || formData.signature || null,
+      nextServiceDate: formData.dueDate ? new Date(formData.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '',
+      deliveryDate: formData.dueDate ? new Date(formData.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : (formData.issueDate || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })),
+      includeSeal: formData.includeSeal !== false,
+      items: (watchItems || []).map(item => ({
         ...item,
+        name: item.name || item.description || '',
+        description: item.description || '',
+        notes: item.notes || '',
+        unit: item.unit || 'Units',
+        qty: parseFloat(item.quantity) || 1,
+        quantity: parseFloat(item.quantity) || 1,
+        deliveredQty: parseFloat(item.deliveredQty) || parseFloat(item.quantity) || 1,
+        remarks: item.remarks || item.notes || 'Good Condition',
         total: (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0)
       })),
       ...totals
@@ -370,15 +445,21 @@ const FinanceDocsPage = () => {
     setSaving(true);
     try {
       const documentData = {
-        type: docType.toUpperCase(),
+        type: docType === 'delivery_note' ? 'DELIVERY_NOTE' : docType === 'job_card' ? 'JOB_CARD' : docType.toUpperCase(),
         clientId: selectedClient.id,
         issueDate: data.issueDate,
-        dueDate: data.dueDate,
-        taxRate: parseFloat(data.taxRate),
+        dueDate: data.dueDate ? data.dueDate : null,
+        taxRate: parseFloat(data.taxRate || 0),
+        taxable: data.taxable !== false,
+        scope: data.scope,
+        technicianName: data.technicianName,
+        includeSeal: data.includeSeal !== false,
+        signature: signature || null,
         notes: data.notes,
         terms: data.terms,
         items: data.items.map(item => ({
-          description: item.description,
+          name: item.name || item.description,
+          description: item.description || item.name || '',
           quantity: parseFloat(item.quantity) || 0,
           unitPrice: parseFloat(item.unitPrice) || 0,
           notes: item.notes
@@ -560,6 +641,9 @@ const FinanceDocsPage = () => {
   };
 
   const isInvoice = docType === 'invoice';
+  const isDeliveryNote = docType === 'delivery_note';
+  const isJobCard = docType === 'job_card';
+  const isQuotation = docType === 'quotation';
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -572,12 +656,22 @@ const FinanceDocsPage = () => {
               <ArrowLeft size={20} className="hidden sm:block" />
             </button>
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center ${isInvoice ? 'bg-orange-100' : 'bg-blue-100'}`}>
-                {isInvoice ? <Receipt className="text-orange-600" size={16} /> : <FileSpreadsheet className="text-blue-600" size={16} />}
+              <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center ${
+                isInvoice ? 'bg-orange-100' : isDeliveryNote ? 'bg-emerald-100' : isJobCard ? 'bg-indigo-100' : 'bg-blue-100'
+              }`}>
+                {isInvoice ? (
+                  <Receipt className="text-orange-600" size={16} />
+                ) : isDeliveryNote ? (
+                  <Truck className="text-emerald-700" size={16} />
+                ) : isJobCard ? (
+                  <ClipboardCheck className="text-indigo-700" size={16} />
+                ) : (
+                  <FileSpreadsheet className="text-blue-600" size={16} />
+                )}
               </div>
               <div>
                 <h1 className="text-base sm:text-xl font-bold text-slate-900">
-                  {editId ? 'Edit' : 'Create'} {isInvoice ? 'Invoice' : 'Quote'}
+                  {editId ? 'Edit' : 'Create'} {isInvoice ? 'Invoice' : isDeliveryNote ? 'Delivery Note' : isJobCard ? 'Service Job Card' : 'Quote'}
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-500 hidden sm:block">
                   {step === 'form' ? 'Fill in the details' : 'Preview and send'}
@@ -617,12 +711,12 @@ const FinanceDocsPage = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8 pb-36 sm:pb-12">
         {/* Type Tabs */}
-        <div className="flex items-center gap-1 sm:gap-2 mb-4 sm:mb-8 bg-white p-1 rounded-xl border border-slate-200 w-full sm:w-fit overflow-x-auto">
+        <div className="flex items-center gap-1.5 sm:gap-2 mb-4 sm:mb-8 bg-white p-1 rounded-xl border border-slate-200 w-full sm:w-fit overflow-x-auto no-scrollbar scroll-smooth">
           <button
             onClick={() => navigate('/finance?type=invoice')}
-            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium text-sm sm:text-base transition-all ${
+            className={`flex-shrink-0 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium text-xs sm:text-base transition-all ${
               isInvoice ? 'bg-orange-500 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
@@ -632,13 +726,33 @@ const FinanceDocsPage = () => {
           </button>
           <button
             onClick={() => navigate('/finance?type=quotation')}
-            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium text-sm sm:text-base transition-all ${
-              !isInvoice ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'
+            className={`flex-shrink-0 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium text-xs sm:text-base transition-all ${
+              isQuotation ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
             <FileSpreadsheet size={16} className="sm:hidden" />
             <FileSpreadsheet size={18} className="hidden sm:block" />
             Quote
+          </button>
+          <button
+            onClick={() => navigate('/finance?type=delivery_note')}
+            className={`flex-shrink-0 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium text-xs sm:text-base transition-all ${
+              isDeliveryNote ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <Truck size={16} className="sm:hidden" />
+            <Truck size={18} className="hidden sm:block" />
+            Delivery Note
+          </button>
+          <button
+            onClick={() => navigate('/finance?type=job_card')}
+            className={`flex-shrink-0 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium text-xs sm:text-base transition-all ${
+              isJobCard ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <ClipboardCheck size={16} className="sm:hidden" />
+            <ClipboardCheck size={18} className="hidden sm:block" />
+            Service Job Card
           </button>
         </div>
 
@@ -685,10 +799,28 @@ const FinanceDocsPage = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">Tax ID / VAT</label>
+                      <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">Tax ID / PIN</label>
                       <input 
                         {...register('companyTaxId')}
                         type="text"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">Phone Number</label>
+                      <input 
+                        {...register('companyPhone')}
+                        type="text"
+                        placeholder="0739443244"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">Company Email</label>
+                      <input 
+                        {...register('companyEmail')}
+                        type="email"
+                        placeholder="info@exoinafrica.com"
                         className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                       />
                     </div>
@@ -709,47 +841,161 @@ const FinanceDocsPage = () => {
                     </div>
                     <div>
                       <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
-                        {isInvoice ? 'Due Date' : 'Valid Until'}
+                        {isInvoice ? 'Due Date' : isDeliveryNote ? 'Delivery Date' : isJobCard ? 'Next Service Date (Optional)' : 'Valid Until'}
                       </label>
                       <input 
-                        {...register(isInvoice ? 'dueDate' : 'validUntil')}
+                        {...register(isInvoice || isJobCard || isDeliveryNote ? 'dueDate' : 'validUntil')}
                         type="date"
                         className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                       />
                     </div>
-                    <div className="col-span-2 md:col-span-1">
-                      <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">Tax Rate (%)</label>
-                      <div className="flex items-center gap-2">
-                        <label className="flex items-center gap-2 cursor-pointer">
+                    {!isJobCard && !isDeliveryNote && (
+                      <div className="col-span-2 md:col-span-1">
+                        <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">Tax Rate (%)</label>
+                        <div className="flex items-center gap-2">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input 
+                              {...register('taxable')}
+                              type="checkbox"
+                              className="w-4 h-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500"
+                            />
+                            <span className="text-xs text-slate-600">Apply Tax</span>
+                          </label>
                           <input 
-                            {...register('taxable')}
-                            type="checkbox"
-                            className="w-4 h-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500"
+                            {...register('taxRate')}
+                            type="number"
+                            min="0"
+                            max="100"
+                            disabled={!watchTaxable}
+                            className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:bg-slate-100 disabled:text-slate-400"
                           />
-                          <span className="text-xs text-slate-600">Apply Tax</span>
-                        </label>
-                        <input 
-                          {...register('taxRate')}
-                          type="number"
-                          min="0"
-                          max="100"
-                          disabled={!watchTaxable}
-                          className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:bg-slate-100 disabled:text-slate-400"
-                        />
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
-                  {/* Scope of Work - Quotation Only */}
-                  {!isInvoice && (
+                  {/* Delivery Note Specifics */}
+                  {isDeliveryNote && (
+                    <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">
+                      <div className="flex items-center justify-between p-3 bg-emerald-50/70 border border-emerald-200/80 rounded-lg sm:rounded-xl">
+                        <div className="flex items-center gap-2.5">
+                          <ShieldCheck size={18} className="text-emerald-700" />
+                          <div>
+                            <p className="text-xs sm:text-sm font-semibold text-slate-800">Verification Seal Watermark</p>
+                            <p className="text-[11px] text-slate-500">Show subtle security seal in delivery document background</p>
+                          </div>
+                        </div>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input 
+                            {...register('includeSeal')}
+                            type="checkbox"
+                            className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
+                          />
+                          <span className="text-xs text-slate-700 font-medium">Include Seal</span>
+                        </label>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                        <div>
+                          <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+                            Order / LPO Reference
+                          </label>
+                          <input 
+                            {...register('scope')}
+                            placeholder="e.g. LPO-99120 / Project Alpha"
+                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+                            Carrier / Vehicle Reg
+                          </label>
+                          <input 
+                            {...register('carrier')}
+                            placeholder="e.g. KBZ 482Y / Direct Fleet"
+                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+                            Dispatched Officer Name
+                          </label>
+                          <input 
+                            {...register('technicianName')}
+                            placeholder="e.g. Peter Ochieng (Operations)"
+                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Scope of Work for Quotation */}
+                  {isQuotation && (
                     <div className="mt-4 pt-4 border-t border-slate-100">
-                      <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">Scope of Work</label>
+                      <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+                        Scope of Work
+                      </label>
                       <textarea 
                         {...register('scope')}
-                        rows={5}
-                        placeholder="Describe the scope of work or services to be provided...\n\nFor example:\n• Project overview and objectives\n• Deliverables included\n• Timeline and milestones\n• Any exclusions or assumptions"
-                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-y min-h-[120px]"
+                        rows={4}
+                        placeholder="Describe the scope of work or services to be provided..."
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y min-h-[60px]"
                       />
+                    </div>
+                  )}
+                  {isJobCard && (
+                    <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">
+                      <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl">
+                        <div className="flex items-center gap-2.5">
+                          <ShieldCheck size={18} className="text-slate-600" />
+                          <div>
+                            <p className="text-xs sm:text-sm font-semibold text-slate-800">Verification Seal Watermark</p>
+                            <p className="text-[11px] text-slate-500">Show subtle verification seal in document background</p>
+                          </div>
+                        </div>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input 
+                            {...register('includeSeal')}
+                            type="checkbox"
+                            className="w-4 h-4 text-slate-900 rounded border-slate-300 focus:ring-slate-900"
+                          />
+                          <span className="text-xs text-slate-700 font-medium">Include Seal</span>
+                        </label>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+                          Service Scope / Description
+                        </label>
+                        <input 
+                          {...register('scope')}
+                          placeholder="e.g. Fumigation and Pest Control Service AT KRA WEBUYE RRU"
+                          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-slate-800 focus:border-slate-800"
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                        <div>
+                          <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+                            Technician / Field Officer Name
+                          </label>
+                          <input 
+                            {...register('technicianName')}
+                            placeholder="e.g. Peter Ochieng"
+                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-slate-800 focus:border-slate-800"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+                            Premises / Site Location (if different)
+                          </label>
+                          <input 
+                            {...register('clientSiteAddress')}
+                            placeholder="e.g. Lake Hub Mall Kisumu / Webuye RRU"
+                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-slate-800 focus:border-slate-800"
+                          />
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -915,45 +1161,66 @@ const FinanceDocsPage = () => {
                   <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-3 sm:mb-4">Notes & Terms</h3>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5">Notes</label>
+                      <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5">
+                        {isJobCard ? 'Notes / Safety & Re-entry Instructions' : 'Notes'}
+                      </label>
                       <textarea
                         {...register('notes')}
-                        rows={4}
-                        placeholder="Add any notes or special instructions...&#10;&#10;You can include multiple lines of text here."
-                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-y min-h-[100px]"
+                        rows={isJobCard ? 3 : 4}
+                        placeholder={isJobCard ? "e.g. Safe for re-entry after 2 hours. Ventilate treated rooms for 30 minutes before occupying." : "Add any notes or special instructions..."}
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-y min-h-[80px]"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5">Terms & Conditions</label>
+                      <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5">
+                        {isJobCard ? 'Client Confirmation Statement' : 'Terms & Conditions'}
+                      </label>
                       <textarea
                         {...register('terms')}
-                        rows={4}
-                        placeholder="Payment terms, conditions, disclaimers...&#10;&#10;Example:&#10;• Payment due within 14 days&#10;• 50% deposit required to commence work"
-                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-y min-h-[100px]"
+                        rows={isJobCard ? 2 : 4}
+                        placeholder={isJobCard ? "e.g. I confirm that the service specified above was carried out satisfactorily on our premises." : "Payment terms, conditions, disclaimers..."}
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-y min-h-[60px]"
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-2 border-t border-slate-100">
-                      <div>
-                        <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5">Bank Name</label>
-                        <input 
-                          {...register('bankName')}
-                          type="text"
-                          placeholder="e.g. Equity Bank"
-                          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                        />
+                    {!isJobCard && !isDeliveryNote && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-2 border-t border-slate-100">
+                        <div>
+                          <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5">Bank Name</label>
+                          <input 
+                            {...register('bankName')}
+                            type="text"
+                            placeholder="e.g. Equity Bank"
+                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5">Account Number</label>
+                          <input 
+                            {...register('bankAccount')}
+                            type="text"
+                            placeholder="e.g. 0000-0000-0000"
+                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5">Account Number</label>
-                        <input 
-                          {...register('bankAccount')}
-                          type="text"
-                          placeholder="e.g. 0000-0000-0000"
-                          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm border border-slate-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                        />
-                      </div>
-                    </div>
+                    )}
                   </div>
+                </div>
+
+                {/* Internal Authorized Signature */}
+                <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
+                    <PenTool size={18} className="text-slate-400" />
+                    Authorized Signature (Internal)
+                  </h3>
+                  <p className="text-xs text-slate-500 mb-3">
+                    Select an official saved internal signature to sign this document.
+                  </p>
+                  <SignaturePicker 
+                    onSelect={handleSignatureSelect}
+                    currentSignature={signature}
+                  />
                 </div>
 
                 {/* Submit */}
@@ -963,37 +1230,85 @@ const FinanceDocsPage = () => {
                   className={`w-full flex items-center justify-center gap-2 px-4 sm:px-6 py-3.5 sm:py-4 text-white rounded-xl font-medium text-sm sm:text-base transition-all shadow-lg ${
                     isInvoice 
                       ? 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-orange-500/25' 
+                      : isDeliveryNote
+                      ? 'bg-gradient-to-r from-slate-900 to-slate-800 hover:from-black hover:to-slate-900 shadow-slate-900/25'
+                      : isJobCard
+                      ? 'bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black shadow-slate-900/25'
                       : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-blue-500/25'
                   } disabled:opacity-50`}
                 >
                   {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                  {saving ? 'Saving...' : `Save ${isInvoice ? 'Invoice' : 'Quotation'}`}
+                  {saving ? 'Saving...' : `Save ${isInvoice ? 'Invoice' : isDeliveryNote ? 'Delivery Note' : isJobCard ? 'Service Job Card' : 'Quotation'}`}
                 </button>
               </form>
             </div>
 
             {/* Live Preview & Totals */}
             <div className="lg:col-span-2 space-y-4 sm:space-y-6 order-1 lg:order-2">
-              {/* Totals Card */}
-              <div className={`bg-gradient-to-br ${isInvoice ? 'from-orange-500 to-orange-600' : 'from-blue-500 to-blue-600'} rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white`}>
+              {/* Document Summary Card */}
+              <div className={`bg-gradient-to-br ${isInvoice ? 'from-orange-500 to-orange-600' : isDeliveryNote ? 'from-slate-900 to-slate-800' : isJobCard ? 'from-slate-800 to-slate-900' : 'from-blue-500 to-blue-600'} rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white`}>
                 <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                  <Calculator size={18} />
-                  <h3 className="font-bold text-sm sm:text-base">Summary</h3>
+                  {isDeliveryNote ? <Truck size={18} /> : isJobCard ? <ClipboardCheck size={18} /> : <Calculator size={18} />}
+                  <h3 className="font-bold text-sm sm:text-base">
+                    {isDeliveryNote ? 'Delivery Summary' : isJobCard ? 'Job Card Summary' : 'Summary'}
+                  </h3>
                 </div>
-                <div className="space-y-2 sm:space-y-3">
-                  <div className="flex justify-between text-white/80 text-sm sm:text-base">
-                    <span>Subtotal</span>
-                    <span className="font-mono">KES {totals.subtotal.toLocaleString()}</span>
+                {isDeliveryNote ? (
+                  <div className="space-y-2.5 text-xs sm:text-sm">
+                    <div className="flex justify-between text-white/80">
+                      <span>Total Items Listed</span>
+                      <span className="font-mono font-bold text-white">{(watchItems || []).length} items</span>
+                    </div>
+                    <div className="flex justify-between text-white/80">
+                      <span>Units Dispatched</span>
+                      <span className="font-mono font-bold text-white">
+                        {(watchItems || []).reduce((sum, item) => sum + (parseFloat(item.quantity) || 1), 0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-white/80">
+                      <span>Carrier / Vehicle</span>
+                      <span className="font-medium text-white truncate max-w-[150px]">{watchCarrier || 'Direct Fleet'}</span>
+                    </div>
+                    <div className="flex justify-between text-sm sm:text-base font-bold pt-2 border-t border-white/20">
+                      <span>Handover Status</span>
+                      <span className="text-emerald-400 font-bold">Dispatched</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-white/80 text-sm sm:text-base">
-                    <span>VAT ({watchTaxRate}%)</span>
-                    <span className="font-mono">KES {totals.taxAmount.toLocaleString()}</span>
+                ) : isJobCard ? (
+                  <div className="space-y-2.5 text-xs sm:text-sm">
+                    <div className="flex justify-between text-white/80">
+                      <span>Customer</span>
+                      <span className="font-medium text-white truncate max-w-[150px]">{selectedClient?.name || 'Customer'}</span>
+                    </div>
+                    <div className="flex justify-between text-white/80">
+                      <span>Technician</span>
+                      <span className="font-medium text-white">{watchTechnician || 'Field Officer'}</span>
+                    </div>
+                    <div className="flex justify-between text-white/80">
+                      <span>Service Date</span>
+                      <span className="font-mono text-white">{watchDueDate ? new Date(watchDueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Today'}</span>
+                    </div>
+                    <div className="flex justify-between text-sm sm:text-base font-bold pt-2 border-t border-white/20">
+                      <span>Sign-off Status</span>
+                      <span className="text-orange-400 font-bold">Awaiting Client Sign</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-xl sm:text-2xl font-bold pt-2 sm:pt-3 border-t border-white/20">
-                    <span>Total</span>
-                    <span className="font-mono">KES {totals.total.toLocaleString()}</span>
+                ) : (
+                  <div className="space-y-2 sm:space-y-3">
+                    <div className="flex justify-between text-white/80 text-sm sm:text-base">
+                      <span>Subtotal</span>
+                      <span className="font-mono">KES {totals.subtotal.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-white/80 text-sm sm:text-base">
+                      <span>VAT ({watchTaxRate}%)</span>
+                      <span className="font-mono">KES {totals.taxAmount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-xl sm:text-2xl font-bold pt-2 sm:pt-3 border-t border-white/20">
+                      <span>Total</span>
+                      <span className="font-mono">KES {totals.total.toLocaleString()}</span>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Mini Preview - Hidden on mobile */}
@@ -1061,17 +1376,76 @@ const FinanceDocsPage = () => {
               />
             </div>
             
-            {/* Mobile action buttons */}
-            <div className="sm:hidden flex items-center gap-2 w-full justify-center">
-              <button onClick={() => setShowShareModal(true)} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 text-sm text-slate-700 shadow-sm">
-                <Share2 size={16} /> Share
-              </button>
-              <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 text-sm text-slate-700 shadow-sm">
-                <Printer size={16} /> Print
-              </button>
+            {/* Mobile zoom & action controls */}
+            <div className="sm:hidden flex flex-col items-center gap-2.5 w-full">
+              <div className="flex items-center justify-between w-full max-w-sm px-3 py-1.5 bg-white border border-slate-200 rounded-xl shadow-xs text-xs text-slate-600">
+                <span className="font-semibold text-slate-700">Zoom: {Math.round(mobileScale * 100)}%</span>
+                <div className="flex items-center gap-1">
+                  <button 
+                    type="button"
+                    onClick={() => setMobileScale(prev => Math.max(0.35, parseFloat((prev - 0.1).toFixed(2))))} 
+                    className="p-1.5 hover:bg-slate-100 active:bg-slate-200 rounded-lg text-slate-600 touch-manipulation"
+                    title="Zoom out"
+                  >
+                    <ZoomOut size={16} />
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={autoFitMobileScale} 
+                    className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-md text-[11px] font-semibold text-slate-700 touch-manipulation"
+                  >
+                    Fit
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setMobileScale(1)} 
+                    className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-md text-[11px] font-semibold text-slate-700 touch-manipulation"
+                  >
+                    100%
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setMobileScale(prev => Math.min(1.5, parseFloat((prev + 0.1).toFixed(2))))} 
+                    className="p-1.5 hover:bg-slate-100 active:bg-slate-200 rounded-lg text-slate-600 touch-manipulation"
+                    title="Zoom in"
+                  >
+                    <ZoomIn size={16} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 w-full justify-center max-w-sm">
+                <button 
+                  onClick={handleDownloadPDF} 
+                  disabled={downloading}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 text-xs font-semibold shadow-sm disabled:opacity-50 touch-manipulation"
+                >
+                  {downloading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                  PDF
+                </button>
+                <button 
+                  onClick={() => setShowShareModal(true)} 
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-xs touch-manipulation"
+                >
+                  <Share2 size={15} /> Share
+                </button>
+                <button 
+                  onClick={handlePrint} 
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-xs touch-manipulation"
+                >
+                  <Printer size={15} /> Print
+                </button>
+              </div>
             </div>
             
-            <div ref={documentRef} className="space-y-4 sm:space-y-8 transform scale-[0.55] sm:scale-100 origin-top">
+            <div 
+              ref={documentRef} 
+              className="space-y-4 sm:space-y-8 origin-top transition-transform duration-150"
+              style={{
+                transform: `scale(${mobileScale})`,
+                transformOrigin: 'top center'
+              }}
+            >
               {(() => {
                 const previewData = getPreviewData();
                 const firstPageItems = 5;

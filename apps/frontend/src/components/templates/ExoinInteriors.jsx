@@ -22,9 +22,9 @@ const ExoinInteriors = () => {
         </div>
         
         {/* Text Stack - Auto Width based on EXOIN */}
-        <div className="flex flex-col justify-between h-14 py-1">
+        <div className="inline-flex flex-col justify-between h-14 py-1 w-fit">
             {/* EXOIN defines the max width */}
-            <div className="relative leading-none">
+            <div className="relative leading-none w-fit">
               <h1 className={`text-4xl font-black tracking-tighter leading-none m-0 ${textColor}`} 
                   style={{ 
                       fontFamily: 'sans-serif', 
@@ -35,9 +35,9 @@ const ExoinInteriors = () => {
             </div>
             
             {/* Africa - Aligned to Right Edge of EXOIN */}
-            <div className="flex items-center gap-2 self-end">
+            <div className="relative h-3 w-full flex items-center justify-end gap-1.5 mt-0.5 pr-0">
               <div className="w-1.5 h-1.5 rounded-full bg-orange-500 shadow-[0_0_10px_#F97316]"></div>
-              <span className={`text-[10px] font-bold tracking-[0.4em] uppercase ${subTextColor}`}>AFRICA</span>
+              <span className={`text-[9px] font-bold tracking-[0.20em] -mr-[0.20em] uppercase leading-none ${subTextColor}`}>AFRICA</span>
             </div>
         </div>
       </div>

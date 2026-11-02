@@ -2,12 +2,42 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0" />
+    
+    <!-- Primary App Meta Tags -->
     <title>Exoin Workspace</title>
+    <meta name="title" content="Exoin Workspace" />
+    <meta name="description" content="Exoin Africa - Service Job Cards, Invoices, Delivery Notes, Quotations & Business Management" />
+    <meta name="application-name" content="Exoin Workspace" />
+    
+    <!-- Theme & Mobile Colors -->
+    <meta name="theme-color" content="#1E3A8A" />
+    <meta name="msapplication-TileColor" content="#1E3A8A" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <!-- Apple Web App Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Exoin" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    
+    <!-- PWA Manifest & Icons -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate icon" href="/favicon.ico" />
   </head>
-  <body>
+  <body class="bg-slate-50 text-slate-900 antialiased selection:bg-orange-500 selection:text-white">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Register Service Worker for PWA / Mobile App
+      if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch((err) => {
+            console.log('SW registration skipped:', err);
+          });
+        });
+      }
+    </script>
   </body>
 </html>

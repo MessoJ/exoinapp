@@ -18,7 +18,8 @@ model User {
   passwordHash String
   firstName    String
   lastName     String
-  role         UserRole @default(STAFF)
+  role              UserRole @default(STAFF)
+  customPermissions String[] @default([])
   jobTitle     String?
   phone        String?
   avatarUrl    String?
@@ -69,6 +70,8 @@ enum UserRole {
   ADMIN
   MANAGER
   STAFF
+  FINANCE
+  AUDITOR
 }
 
 // ==================== COMPANY / ORGANIZATION ====================
@@ -158,6 +161,9 @@ model Document {
   scope String? @db.Text
   notes String?
   terms String?
+  technicianName String?
+  includeSeal    Boolean @default(true)
+  signature      String? @db.Text
 
   // Generated PDF
   pdfUrl String?
@@ -183,6 +189,8 @@ enum DocumentType {
   QUOTATION
   LETTERHEAD
   RECEIPT
+  DELIVERY_NOTE
+  JOB_CARD
 }
 
 enum DocumentStatus {
@@ -888,4 +896,18 @@ enum MailboxAuditAction {
   BULK_IMPORT_STARTED
   BULK_IMPORT_COMPLETED
   DOMAIN_SETTINGS_CHANGED
+}
+
+// ==================== RBAC ROLE SETTINGS ====================
+
+model RoleSetting {
+  id          String   @id @default(uuid())
+  companyId   String
+  role        UserRole
+  permissions String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([companyId, role])
+  @@index([companyId])
 }

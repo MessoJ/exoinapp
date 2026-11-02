@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
-  LayoutDashboard, FileText, Mail, Settings, LogOut, Users,
+  X, LayoutDashboard, FileText, Mail, Settings, LogOut, Users,
   Receipt, ChevronDown, ChevronRight, Server, PenTool, Inbox,
   LayoutGrid, Plus, CreditCard, Monitor, Briefcase, Palette,
   Building, Shield, UserCog, Folders, FileSpreadsheet,
-  ChevronLeft, Menu, Home, FolderOpen, Image
+  ChevronLeft, Menu, Home, FolderOpen, Image, Truck, ClipboardCheck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { mailApi } from '../../lib/api';
 import Logo from '../templates/Logo';
 
 // Sidebar Navigation Item with optional children
-const NavItem = ({ to, icon: Icon, label, badge, children, isActive, collapsed }) => {
+const NavItem = ({ to, icon: Icon, label, badge, children, isActive, collapsed, onCloseMobile }) => {
   const [expanded, setExpanded] = useState(false);
   const location = useLocation();
   
@@ -31,9 +31,9 @@ const NavItem = ({ to, icon: Icon, label, badge, children, isActive, collapsed }
       <div>
         <button
           onClick={() => setExpanded(!expanded)}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 active:scale-98 ${
             hasActiveChild 
-              ? 'bg-orange-50 text-orange-600' 
+              ? 'bg-orange-50 text-orange-600 font-semibold' 
               : 'text-slate-600 hover:bg-slate-50'
           }`}
         >
@@ -43,7 +43,7 @@ const NavItem = ({ to, icon: Icon, label, badge, children, isActive, collapsed }
               <span className="text-sm flex-1 text-left font-medium">{label}</span>
               <ChevronDown 
                 size={16} 
-                className={`text-slate-400 transition-transform ${expanded ? 'rotate-180' : ''}`} 
+                className={`text-slate-400 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} 
               />
             </>
           )}
@@ -55,9 +55,10 @@ const NavItem = ({ to, icon: Icon, label, badge, children, isActive, collapsed }
               <Link
                 key={idx}
                 to={child.to}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                onClick={() => onCloseMobile && onCloseMobile()}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all duration-150 active:scale-98 ${
                   location.pathname === child.to || location.pathname.startsWith(child.to + '/')
-                    ? 'bg-orange-50 text-orange-600 font-medium'
+                    ? 'bg-orange-50 text-orange-600 font-semibold'
                     : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                 }`}
               >
@@ -79,9 +80,10 @@ const NavItem = ({ to, icon: Icon, label, badge, children, isActive, collapsed }
   return (
     <Link
       to={to}
-      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+      onClick={() => onCloseMobile && onCloseMobile()}
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 active:scale-98 ${
         isCurrentActive 
-          ? 'bg-orange-50 text-orange-600 font-medium' 
+          ? 'bg-orange-50 text-orange-600 font-semibold' 
           : 'text-slate-600 hover:bg-slate-50'
       }`}
       title={collapsed ? label : undefined}
@@ -111,7 +113,7 @@ const SectionHeader = ({ label, collapsed }) => {
   );
 };
 
-const CollapsibleSidebar = () => {
+const CollapsibleSidebar = ({ mobileOpen = false, onCloseMobile = () => {} }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -189,6 +191,8 @@ const CollapsibleSidebar = () => {
             { to: '/finance', icon: FileSpreadsheet, label: 'All Finance Docs' },
             { to: '/finance?type=invoice', icon: Receipt, label: 'New Invoice' },
             { to: '/finance?type=quotation', icon: FileSpreadsheet, label: 'New Quotation' },
+            { to: '/finance?type=delivery_note', icon: Truck, label: 'New Delivery Note' },
+            { to: '/finance?type=job_card', icon: ClipboardCheck, label: 'Service Job Card' },
           ]
         },
         { to: '/clients', icon: Users, label: 'Clients' },
@@ -223,10 +227,10 @@ const CollapsibleSidebar = () => {
       items: [
         ...(isManager ? [{
           icon: UserCog,
-          label: 'Team',
+          label: 'Team & RBAC',
           children: [
-            { to: '/users', icon: Users, label: 'User Management' },
-            { to: '/admin/team-members', icon: Users, label: 'Team Members' },
+            { to: '/users', icon: Users, label: 'Team Directory' },
+            { to: '/users?tab=matrix', icon: Shield, label: 'Roles & Permissions' },
           ]
         }] : []),
         {
@@ -241,34 +245,42 @@ const CollapsibleSidebar = () => {
     },
   ];
 
-  return (
-    <aside 
-      className={`bg-white border-r border-slate-200 flex flex-col transition-all duration-300 ${
-        collapsed ? 'w-16' : 'w-64'
-      }`}
-    >
+  const sidebarContent = (isMobile = false) => (
+    <div className="flex flex-col h-full bg-white">
       {/* Header */}
-      <div className={`p-4 border-b border-slate-100 flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
-        {!collapsed && <Logo className="scale-75 origin-left" />}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors"
-        >
-          {collapsed ? <Menu size={18} /> : <ChevronLeft size={18} />}
-        </button>
+      <div className={`p-4 border-b border-slate-100 flex items-center ${!isMobile && collapsed ? 'justify-center' : 'justify-between'}`}>
+        {(!collapsed || isMobile) && <Logo asLink={true} className="scale-75 origin-left" />}
+        {isMobile ? (
+          <button
+            onClick={onCloseMobile}
+            className="p-2 hover:bg-slate-100 rounded-xl text-slate-500 transition-colors active:scale-90"
+            aria-label="Close menu"
+          >
+            <X size={20} />
+          </button>
+        ) : (
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-2 hover:bg-slate-100 rounded-xl text-slate-500 transition-colors"
+            aria-label="Toggle sidebar"
+          >
+            {collapsed ? <Menu size={18} /> : <ChevronLeft size={18} />}
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-3 space-y-1">
         {navigation.map((section, sectionIdx) => (
           <div key={sectionIdx} className="mb-4">
-            <SectionHeader label={section.section} collapsed={collapsed} />
+            <SectionHeader label={section.section} collapsed={!isMobile && collapsed} />
             <div className="space-y-0.5">
               {section.items.map((item, itemIdx) => (
                 <NavItem
                   key={itemIdx}
                   {...item}
-                  collapsed={collapsed}
+                  collapsed={!isMobile && collapsed}
+                  onCloseMobile={onCloseMobile}
                 />
               ))}
             </div>
@@ -276,29 +288,62 @@ const CollapsibleSidebar = () => {
         ))}
       </nav>
 
-      {/* User Section */}
-      <div className={`p-3 border-t border-slate-100 ${collapsed ? 'text-center' : ''}`}>
-        {!collapsed && (
-          <div className="flex items-center gap-3 px-3 py-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-semibold text-sm">
+      {/* User Section with Mobile Safe Area Inset */}
+      <div 
+        className={`p-3 border-t border-slate-100 ${!isMobile && collapsed ? 'text-center' : ''}`}
+        style={isMobile ? { paddingBottom: 'max(16px, env(safe-area-inset-bottom))' } : undefined}
+      >
+        {(!collapsed || isMobile) && (
+          <div className="flex items-center gap-3 px-3 py-2 mb-2 bg-slate-50/70 rounded-xl">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-semibold text-sm shadow-xs">
               {user?.name?.charAt(0) || 'U'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-900 truncate">{user?.name || 'User'}</p>
+              <p className="text-sm font-semibold text-slate-900 truncate">{user?.name || 'User'}</p>
               <p className="text-xs text-slate-500 truncate">{user?.role || 'Staff'}</p>
             </div>
           </div>
         )}
         <button 
           onClick={handleLogout}
-          className={`flex items-center gap-3 px-3 py-2.5 w-full text-red-600 hover:bg-red-50 rounded-lg transition-colors ${collapsed ? 'justify-center' : ''}`}
-          title={collapsed ? 'Logout' : undefined}
+          className={`flex items-center gap-3 px-3 py-2.5 w-full text-red-600 hover:bg-red-50 rounded-xl transition-all duration-150 active:scale-95 ${!isMobile && collapsed ? 'justify-center' : ''}`}
+          title={!isMobile && collapsed ? 'Logout' : undefined}
         >
           <LogOut size={18} />
-          {!collapsed && <span className="text-sm">Logout</span>}
+          {(!collapsed || isMobile) && <span className="text-sm font-semibold">Logout</span>}
         </button>
       </div>
-    </aside>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Persistent Sidebar */}
+      <aside 
+        className={`hidden md:flex flex-col bg-white border-r border-slate-200 transition-all duration-300 ${
+          collapsed ? 'w-16' : 'w-64'
+        }`}
+      >
+        {sidebarContent(false)}
+      </aside>
+
+      {/* Mobile Backdrop & Drawer (Elevated to z-[60] so it sits above mobile bottom bar and action sheets) */}
+      {mobileOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-[60] md:hidden animate-in fade-in duration-200"
+          onClick={onCloseMobile}
+          aria-hidden="true"
+        />
+      )}
+
+      <div 
+        className={`fixed inset-y-0 left-0 z-[60] w-72 max-w-[85vw] bg-white shadow-2xl transition-transform duration-300 ease-in-out md:hidden flex flex-col ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {sidebarContent(true)}
+      </div>
+    </>
   );
 };
 

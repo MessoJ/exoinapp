@@ -439,10 +439,11 @@ const EmailThread = ({
         <div className="flex items-center gap-1">
           <button 
             onClick={onClose} 
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-400 transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1.5 -ml-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300 font-medium text-xs active:scale-95 transition-all"
             title="Back to list"
           >
             <ChevronLeft size={18} />
+            <span className="inline lg:hidden font-semibold">Back</span>
           </button>
           
           <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1" />
@@ -532,7 +533,7 @@ const EmailThread = ({
 
       {/* Thread Content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto p-4">
+        <div className="max-w-4xl mx-auto p-4 pb-32 sm:pb-8">
           {/* Thread Header */}
           <div className="mb-4">
             <div className="flex items-start justify-between gap-4">

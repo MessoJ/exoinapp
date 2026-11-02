@@ -22,11 +22,13 @@ import trackingRoutes from './routes/tracking';
 import mailMergeRoutes from './routes/mailMerge';
 import twoFactorRoutes from './routes/twoFactor';
 import adminRoutes from './routes/admin';
+import rbacRoutes from './routes/rbac';
 
 // Import Services
 import { websocketService } from './services/websocketService';
 import { cacheService } from './services/cacheService';
 import { jobQueueService } from './services/jobQueueService';
+import rbacService from './services/rbacService';
 
 // Initialize Prisma
 export const prisma = new PrismaClient();
@@ -39,7 +41,7 @@ const server = Fastify({
 
 // Register Plugins
 server.register(cors, { 
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
+  origin: true,
   credentials: true,
 });
 
@@ -54,6 +56,63 @@ server.decorate('authenticate', async function(request: any, reply: any) {
   } catch (err) {
     reply.status(401).send({ error: 'Unauthorized' });
   }
+});
+
+// Enterprise RBAC Policy Enforcement Point (PEP) Decorators
+server.decorate('authorize', function(requiredPermission: string) {
+  return async function(request: any, reply: any) {
+    try {
+      await request.jwtVerify();
+    } catch (err) {
+      return reply.status(401).send({ error: 'Unauthorized' });
+    }
+
+    const user = request.user;
+    if (!user) {
+      return reply.status(401).send({ error: 'Unauthorized' });
+    }
+
+    const effectivePermissions = await rbacService.getUserEffectivePermissions(user);
+    const allowed = rbacService.hasPermission(effectivePermissions, requiredPermission);
+
+    if (!allowed) {
+      return reply.status(403).send({
+        error: 'Forbidden',
+        message: `Insufficient permissions: requires '${requiredPermission}'`,
+        requiredPermission
+      });
+    }
+
+    request.user.permissions = effectivePermissions;
+  };
+});
+
+server.decorate('authorizeAny', function(requiredPermissions: string[]) {
+  return async function(request: any, reply: any) {
+    try {
+      await request.jwtVerify();
+    } catch (err) {
+      return reply.status(401).send({ error: 'Unauthorized' });
+    }
+
+    const user = request.user;
+    if (!user) {
+      return reply.status(401).send({ error: 'Unauthorized' });
+    }
+
+    const effectivePermissions = await rbacService.getUserEffectivePermissions(user);
+    const allowed = requiredPermissions.some(perm => rbacService.hasPermission(effectivePermissions, perm));
+
+    if (!allowed) {
+      return reply.status(403).send({
+        error: 'Forbidden',
+        message: `Insufficient permissions: requires one of [${requiredPermissions.join(', ')}]`,
+        requiredPermissions
+      });
+    }
+
+    request.user.permissions = effectivePermissions;
+  };
 });
 
 // Health Check
@@ -79,6 +138,7 @@ server.register(trackingRoutes, { prefix: '/api/track' });
 server.register(mailMergeRoutes, { prefix: '/api/mail-merge' });
 server.register(twoFactorRoutes, { prefix: '/api/auth/2fa' });
 server.register(adminRoutes, { prefix: '/api/admin' });
+server.register(rbacRoutes, { prefix: '/api/rbac' });
 
 // Start Server
 const start = async () => {

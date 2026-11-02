@@ -80,6 +80,23 @@ const MailSetupScreen = ({ onSetupComplete }) => {
     }
   };
 
+  const handleUseWorkspace = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await mailApi.setupAccount('internal');
+      if (res.data.success) {
+        onSetupComplete(res.data);
+      } else {
+        setError(res.data.message || 'Setup failed');
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Setup failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <div className="w-full max-w-md">
@@ -146,12 +163,32 @@ const MailSetupScreen = ({ onSetupComplete }) => {
               <button
                 onClick={handleSetup}
                 disabled={!password || loading}
-                className="flex-[2] flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 transition-all font-medium shadow-lg shadow-orange-500/25"
+                className="flex-[2] flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 transition-all font-medium shadow-lg shadow-orange-500/25 active:scale-95"
               >
                 {loading ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
                 Connect & Sync
               </button>
             </div>
+
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200 dark:border-slate-700" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white dark:bg-slate-800 px-3 text-slate-400 font-semibold tracking-wider">
+                  Or instant access
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleUseWorkspace}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 rounded-xl transition-all font-medium active:scale-95 border border-slate-200/60 dark:border-slate-600 shadow-sm"
+            >
+              <Inbox size={18} className="text-orange-500" />
+              <span>Use Exoin Workspace Mailbox</span>
+            </button>
           </div>
         </div>
 
@@ -258,6 +295,8 @@ const MailPage = () => {
   const [showVacationResponder, setShowVacationResponder] = useState(false);
   const [showPriorityInbox, setShowPriorityInbox] = useState(false);
   const [showScheduledList, setShowScheduledList] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Get state and actions from mail store
   const {
@@ -442,9 +481,9 @@ const MailPage = () => {
   }
 
   return (
-    <div className="h-[calc(100vh-7rem)] flex bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden transition-colors duration-200">
+    <div className="h-[calc(100vh-8.5rem)] md:h-[calc(100vh-7rem)] flex bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-sm overflow-hidden transition-colors duration-200 relative">
       {/* Sidebar */}
-      <div className={`${sidebarCollapsed ? 'w-16' : 'w-64'} border-r border-slate-200 dark:border-slate-700 flex flex-col bg-gradient-to-b from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 transition-all duration-200`}>
+      <div className={`hidden md:flex ${sidebarCollapsed ? 'w-16' : 'w-64'} border-r border-slate-200 dark:border-slate-700 flex-col bg-gradient-to-b from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 transition-all duration-200`}>
         {/* Compose Button */}
         <div className="p-3">
           <button
@@ -493,10 +532,89 @@ const MailPage = () => {
         </div>
       </div>
 
+      {/* Mobile Drawer */}
+      {mobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          <div 
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" 
+            onClick={() => setMobileSidebarOpen(false)} 
+          />
+          <div className="relative w-72 max-w-[80vw] bg-white dark:bg-slate-900 h-full flex flex-col shadow-2xl border-r border-slate-200 dark:border-slate-800 z-10 animate-in slide-in-from-left duration-200">
+            <div className="p-3.5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-orange-500/10 text-orange-500 flex items-center justify-center font-bold">
+                  <Mail size={18} />
+                </div>
+                <span className="font-semibold text-slate-800 dark:text-slate-100 text-sm">Exoin Mail</span>
+              </div>
+              <button 
+                onClick={() => setMobileSidebarOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg active:scale-95"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-3">
+              <button
+                onClick={() => {
+                  setMobileSidebarOpen(false);
+                  openCompose();
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-medium shadow-md shadow-orange-500/25 active:scale-95 transition-all text-sm"
+              >
+                <Edit3 size={16} />
+                <span>Compose Mail</span>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-1">
+              <FolderTree
+                folders={[
+                  ...folders,
+                  { path: 'SNOOZED', name: 'Snoozed', unseen: 0 }
+                ]}
+                labels={labels}
+                selectedFolder={selectedFolder}
+                collapsed={false}
+                onFolderSelect={(folder) => {
+                  setSelectedFolder(folder);
+                  setMobileSidebarOpen(false);
+                }}
+                onLabelSelect={(labelId) => {
+                  setSearchQuery(`label:${labelId}`);
+                  search(`label:${labelId}`);
+                  setMobileSidebarOpen(false);
+                }}
+                userEmail={user?.email}
+              />
+            </div>
+            <div className="p-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                onClick={() => {
+                  sync();
+                  setMobileSidebarOpen(false);
+                }}
+                disabled={syncing}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-sm font-medium"
+              >
+                <RefreshCw size={15} className={syncing ? 'animate-spin' : ''} />
+                <span>{syncing ? 'Syncing...' : 'Sync Mailbox'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Search bar */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+        <div className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+          <button
+            onClick={() => setMobileSidebarOpen(true)}
+            className="md:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg active:scale-95 transition-all flex-shrink-0"
+            title="Folders & Mailboxes"
+          >
+            <PanelLeft size={18} />
+          </button>
           <SearchBar
             ref={searchInputRef}
             value={searchQuery}
@@ -512,57 +630,116 @@ const MailPage = () => {
             apiSuggestions={searchSuggestions}
             className="flex-1 max-w-2xl"
           />
-          <ThemeToggle />
+          {/* Always visible sync button */}
           <button 
-            onClick={() => updateSettings({ conversationView: !settings.conversationView })}
-            className={`p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors ${
-              settings.conversationView 
-                ? 'text-orange-500' 
-                : 'text-slate-500 dark:text-slate-400'
-            }`}
-            title={settings.conversationView ? 'Conversation view on' : 'Conversation view off'}
+            onClick={() => fetchEmails(false)} 
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 active:scale-95 transition-all flex-shrink-0"
+            title="Sync & refresh emails"
           >
-            <MessageSquare size={18} />
+            <RefreshCw size={18} className={loadingEmails ? 'animate-spin text-orange-500' : ''} />
           </button>
-          <button onClick={() => fetchEmails(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400">
-            <RefreshCw size={18} />
-          </button>
-          <button 
-            onClick={() => setShowPriorityInbox(!showPriorityInbox)}
-            className={`p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors ${
-              showPriorityInbox 
-                ? 'text-orange-500' 
-                : 'text-slate-500 dark:text-slate-400'
-            }`}
-            title="Priority Inbox"
-          >
-            <LayoutGrid size={18} />
-          </button>
-          <button 
-            onClick={() => setShowScheduledList(!showScheduledList)}
-            className={`p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors ${
-              showScheduledList 
-                ? 'text-orange-500' 
-                : 'text-slate-500 dark:text-slate-400'
-            }`}
-            title="Scheduled Emails"
-          >
-            <Calendar size={18} />
-          </button>
-          <button 
-            onClick={() => setShowVacationResponder(true)}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400"
-            title="Vacation Responder"
-          >
-            <Palmtree size={18} />
-          </button>
-          <button 
-            onClick={toggleKeyboardShortcuts} 
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400"
-            title="Keyboard shortcuts (?)"
-          >
-            <Keyboard size={18} />
-          </button>
+
+          {/* Desktop Toolbar Icons */}
+          <div className="hidden md:flex items-center gap-1">
+            <ThemeToggle />
+            <button 
+              onClick={() => updateSettings({ conversationView: !settings.conversationView })}
+              className={`p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors ${
+                settings.conversationView 
+                  ? 'text-orange-500' 
+                  : 'text-slate-500 dark:text-slate-400'
+              }`}
+              title={settings.conversationView ? 'Conversation view on' : 'Conversation view off'}
+            >
+              <MessageSquare size={18} />
+            </button>
+            <button 
+              onClick={() => setShowPriorityInbox(!showPriorityInbox)}
+              className={`p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors ${
+                showPriorityInbox 
+                  ? 'text-orange-500' 
+                  : 'text-slate-500 dark:text-slate-400'
+              }`}
+              title="Priority Inbox"
+            >
+              <LayoutGrid size={18} />
+            </button>
+            <button 
+              onClick={() => setShowScheduledList(!showScheduledList)}
+              className={`p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors ${
+                showScheduledList 
+                  ? 'text-orange-500' 
+                  : 'text-slate-500 dark:text-slate-400'
+              }`}
+              title="Scheduled Emails"
+            >
+              <Calendar size={18} />
+            </button>
+            <button 
+              onClick={() => setShowVacationResponder(true)}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400"
+              title="Vacation Responder"
+            >
+              <Palmtree size={18} />
+            </button>
+            <button 
+              onClick={toggleKeyboardShortcuts} 
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400"
+              title="Keyboard shortcuts (?)"
+            >
+              <Keyboard size={18} />
+            </button>
+          </div>
+
+          {/* Mobile More Options Dropdown */}
+          <div className="relative md:hidden">
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 active:scale-95 transition-all"
+              title="More options"
+            >
+              <MoreHorizontal size={18} />
+            </button>
+
+            {mobileMenuOpen && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setMobileMenuOpen(false)} 
+                />
+                <div className="absolute right-0 top-full mt-1.5 w-52 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1.5 z-50 animate-in fade-in duration-150">
+                  <button
+                    onClick={() => { setShowPriorityInbox(!showPriorityInbox); setMobileMenuOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                  >
+                    <LayoutGrid size={16} className={showPriorityInbox ? 'text-orange-500' : 'text-slate-400'} />
+                    <span>Priority Inbox</span>
+                  </button>
+                  <button
+                    onClick={() => { setShowScheduledList(true); setMobileMenuOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                  >
+                    <Calendar size={16} className="text-slate-400" />
+                    <span>Scheduled Emails</span>
+                  </button>
+                  <button
+                    onClick={() => { setShowVacationResponder(true); setMobileMenuOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                  >
+                    <Palmtree size={16} className="text-slate-400" />
+                    <span>Vacation Responder</span>
+                  </button>
+                  <button
+                    onClick={() => { updateSettings({ conversationView: !settings.conversationView }); setMobileMenuOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                  >
+                    <MessageSquare size={16} className={settings.conversationView ? 'text-orange-500' : 'text-slate-400'} />
+                    <span>Conversation View ({settings.conversationView ? 'On' : 'Off'})</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Bulk actions bar */}
@@ -692,6 +869,18 @@ const MailPage = () => {
           )}
         </div>
       </div>
+
+      {/* Mobile Floating Compose Button */}
+      {!selectedEmail && (
+        <button
+          onClick={() => openCompose()}
+          className="md:hidden fixed right-5 bottom-24 z-30 flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-full shadow-lg shadow-orange-500/30 font-semibold active:scale-95 transition-transform touch-manipulation"
+          aria-label="Compose New Email"
+        >
+          <Edit3 size={18} strokeWidth={2.4} />
+          <span className="text-xs font-bold tracking-wide">Compose</span>
+        </button>
+      )}
 
       {/* Compose modal */}
       <ComposeModal
