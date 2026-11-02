@@ -12,11 +12,9 @@
 # - Built-in Web Admin UI & REST API on port 8081
 # ==============================================================================
 
-version: '3.8'
-
 services:
   stalwart-mail:
-    image: stalwartlabs/mail-server:latest
+    image: stalwartlabs/stalwart:latest
     container_name: stalwart-mail
     restart: unless-stopped
     init: true
