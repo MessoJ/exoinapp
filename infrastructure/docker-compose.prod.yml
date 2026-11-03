@@ -1,5 +1,5 @@
 # Production docker-compose for exoinapp
-# Works alongside Mailu - app runs on port 8080
+# Works alongside Mailu / Stalwart - app runs on port 8080
 # Access via: http://app.exoinafrica.com:8080 (or use Caddy for SSL termination)
 # Run with: docker-compose -f docker-compose.prod.yml up -d
 
@@ -56,14 +56,14 @@ services:
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-admin}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-secureminiopass}
       - MINIO_USE_SSL=false
-      - SMTP_HOST=${SMTP_HOST:-smtp-relay.brevo.com}
-      - SMTP_PORT=${SMTP_PORT:-587}
-      - SMTP_SECURE=false
-      - SMTP_USER=${SMTP_USER}
-      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_HOST=${SMTP_HOST:-stalwart-mail}
+      - SMTP_PORT=${SMTP_PORT:-465}
+      - SMTP_SECURE=${SMTP_SECURE:-true}
+      - SMTP_USER=${SMTP_USER:-admin@exoinafrica.com}
+      - SMTP_PASS=${SMTP_PASS:-jhoqEX3TrBmqrfi6}
       - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-admin@exoinafrica.com}
       - SMTP_FROM_NAME=${SMTP_FROM_NAME:-Exoin Africa}
-      - IMAP_HOST=${IMAP_HOST:-mail.exoinafrica.com}
+      - IMAP_HOST=${IMAP_HOST:-stalwart-mail}
       - IMAP_PORT=${IMAP_PORT:-993}
       - REDIS_URL=redis://redis:6379
     depends_on:

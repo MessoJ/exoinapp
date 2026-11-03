@@ -67,7 +67,7 @@ class EmailService {
   private initTransporter(): void {
     const host = process.env.SMTP_HOST;
     const port = parseInt(process.env.SMTP_PORT || '587', 10);
-    const secure = process.env.SMTP_SECURE === 'true';
+    const secure = process.env.SMTP_SECURE === 'true' || port === 465;
     const user = process.env.SMTP_USER;
     const pass = process.env.SMTP_PASS;
 
@@ -87,9 +87,9 @@ class EmailService {
         connectionTimeout: 10000, // 10 seconds
         greetingTimeout: 10000,
         socketTimeout: 30000, // 30 seconds for large emails
-        // TLS options
+        // TLS options - accept local/self-signed certs unless strict mode is enabled
         tls: {
-          rejectUnauthorized: process.env.NODE_ENV === 'production',
+          rejectUnauthorized: process.env.SMTP_REJECT_UNAUTHORIZED === 'true',
         },
         // Debug mode for development
         debug: process.env.NODE_ENV === 'development',
@@ -97,7 +97,7 @@ class EmailService {
       });
 
       this.isConfigured = true;
-      console.log('✅ SMTP transporter initialized');
+      console.log('✅ SMTP transporter initialized for host:', host);
     } catch (error) {
       console.error('❌ Failed to initialize SMTP transporter:', error);
       this.isConfigured = false;
@@ -118,8 +118,8 @@ class EmailService {
       return { 
         success: true, 
         message: 'SMTP connection verified successfully',
-        host: process.env.SMTP_HOST || 'Brevo SMTP',
-        port: parseInt(process.env.SMTP_PORT || '587', 10)
+        host: process.env.SMTP_HOST || 'Stalwart SMTP',
+        port: parseInt(process.env.SMTP_PORT || '465', 10)
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -345,6 +345,9 @@ class EmailService {
         port: config.port || 587,
         secure: config.secure || false,
         auth: config.auth,
+        tls: {
+          rejectUnauthorized: process.env.SMTP_REJECT_UNAUTHORIZED === 'true',
+        },
       });
       this.isConfigured = true;
     }

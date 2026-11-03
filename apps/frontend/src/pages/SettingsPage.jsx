@@ -64,11 +64,11 @@ const SettingsPage = () => {
 
   // SMTP Settings State
   const [smtpConfig, setSmtpConfig] = useState({
-    host: 'smtp-relay.brevo.com',
-    port: 587,
-    secure: false,
-    user: '9ce801001@smtp-brevo.com',
-    pass: '',
+    host: 'stalwart-mail',
+    port: 465,
+    secure: true,
+    user: 'admin@exoinafrica.com',
+    pass: 'jhoqEX3TrBmqrfi6',
     fromEmail: 'admin@exoinafrica.com',
     fromName: 'Exoin Africa'
   });
@@ -708,6 +708,15 @@ const SettingsPage = () => {
               </div>
 
               <div className="flex items-center gap-2">
+                <a
+                  href="http://localhost:8081/account"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5"
+                >
+                  <ExternalLink size={14} />
+                  <span>Stalwart WebUI</span>
+                </a>
                 <button
                   type="button"
                   onClick={handleVerifySmtp}
@@ -742,6 +751,57 @@ const SettingsPage = () => {
               )}
             </div>
 
+            {/* Quick Presets */}
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1">Quick Presets:</span>
+              <button
+                type="button"
+                onClick={() => setSmtpConfig({
+                  host: 'stalwart-mail',
+                  port: 465,
+                  secure: true,
+                  user: 'admin@exoinafrica.com',
+                  pass: 'jhoqEX3TrBmqrfi6',
+                  fromEmail: 'admin@exoinafrica.com',
+                  fromName: 'Exoin Africa'
+                })}
+                className="px-2.5 py-1 text-xs font-medium rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-all flex items-center gap-1.5 active:scale-95"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                Stalwart Mail Server (Active)
+              </button>
+              <button
+                type="button"
+                onClick={() => setSmtpConfig({
+                  host: 'smtp-relay.brevo.com',
+                  port: 587,
+                  secure: false,
+                  user: '9ce801001@smtp-brevo.com',
+                  pass: '',
+                  fromEmail: 'admin@exoinafrica.com',
+                  fromName: 'Exoin Africa'
+                })}
+                className="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-all active:scale-95"
+              >
+                Brevo Relay
+              </button>
+              <button
+                type="button"
+                onClick={() => setSmtpConfig({
+                  host: '172.17.0.1',
+                  port: 1025,
+                  secure: false,
+                  user: '',
+                  pass: '',
+                  fromEmail: 'admin@exoinafrica.com',
+                  fromName: 'Exoin Africa'
+                })}
+                className="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-all active:scale-95"
+              >
+                MailHog Local
+              </button>
+            </div>
+
             {/* SMTP Configuration Fields */}
             <form onSubmit={handleSaveSmtp} className="mt-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -755,7 +815,7 @@ const SettingsPage = () => {
                     value={smtpConfig.host}
                     onChange={handleSmtpChange}
                     className="w-full bg-slate-50 border border-slate-200/80 rounded-xl px-3.5 py-2.5 text-sm font-mono text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                    placeholder="smtp-relay.brevo.com"
+                    placeholder="stalwart-mail"
                   />
                 </div>
                 <div>
@@ -768,8 +828,9 @@ const SettingsPage = () => {
                     onChange={handleSmtpChange}
                     className="w-full bg-slate-50 border border-slate-200/80 rounded-xl px-3.5 py-2.5 text-sm font-mono text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                   >
+                    <option value="465">465 (SMTPS / SSL - Stalwart Default)</option>
                     <option value="587">587 (Submission / STARTTLS)</option>
-                    <option value="465">465 (SMTPS / SSL)</option>
+                    <option value="25">25 (Standard SMTP)</option>
                     <option value="2525">2525 (Alternative)</option>
                     <option value="1025">1025 (Local Relay)</option>
                   </select>
@@ -787,7 +848,7 @@ const SettingsPage = () => {
                     value={smtpConfig.user}
                     onChange={handleSmtpChange}
                     className="w-full bg-slate-50 border border-slate-200/80 rounded-xl px-3.5 py-2.5 text-sm font-mono text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                    placeholder="username or API key"
+                    placeholder="admin@exoinafrica.com"
                   />
                 </div>
                 <div>

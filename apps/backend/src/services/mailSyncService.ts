@@ -46,28 +46,40 @@ function getMailServerConfig(): MailServerConfig {
     imapHost: process.env.IMAP_HOST || process.env.SMTP_HOST || 'mail.exoinafrica.com',
     imapPort: parseInt(process.env.IMAP_PORT || '993'),
     smtpHost: process.env.SMTP_HOST || 'mail.exoinafrica.com',
-    smtpPort: parseInt(process.env.SMTP_PORT || '587'),
+    smtpPort: parseInt(process.env.SMTP_PORT || '465'),
     secure: true,
   };
 }
 
-// Folder name mapping (Mailu uses standard names)
+// Folder name mapping (Supports Stalwart, standard IMAP, and Mailu)
 const IMAP_TO_DB_FOLDER: Record<string, EmailFolder> = {
   'INBOX': 'INBOX',
   'Sent': 'SENT',
+  'Sent Items': 'SENT',
   'Drafts': 'DRAFTS',
   'Trash': 'TRASH',
+  'Deleted Items': 'TRASH',
   'Junk': 'SPAM',
+  'Junk Mail': 'SPAM',
   'Archive': 'ARCHIVE',
 };
 
 const DB_TO_IMAP_FOLDER: Record<EmailFolder, string> = {
   'INBOX': 'INBOX',
-  'SENT': 'Sent',
+  'SENT': 'Sent Items',
   'DRAFTS': 'Drafts',
-  'TRASH': 'Trash',
-  'SPAM': 'Junk',
+  'TRASH': 'Deleted Items',
+  'SPAM': 'Junk Mail',
   'ARCHIVE': 'Archive',
+};
+
+const FOLDER_FALLBACKS: Record<EmailFolder, string[]> = {
+  'INBOX': ['INBOX'],
+  'SENT': ['Sent Items', 'Sent', 'SENT'],
+  'DRAFTS': ['Drafts', 'DRAFTS'],
+  'TRASH': ['Deleted Items', 'Trash', 'TRASH'],
+  'SPAM': ['Junk Mail', 'Junk', 'SPAM'],
+  'ARCHIVE': ['Archive', 'ARCHIVE'],
 };
 
 // Extract address from mailparser AddressObject
@@ -109,13 +121,27 @@ class MailSyncService {
       auth: { user: email, pass: password },
       logger: false,
       tls: {
-        rejectUnauthorized: false, // Accept Mailu's certificate
+        rejectUnauthorized: false, // Accept local/self-signed certs
         minVersion: 'TLSv1.2',
       },
       greetingTimeout: 45000, // 45 second timeout
       socketTimeout: 90000,   // 90 second socket timeout
       disableCompression: true, // Disable compression for stability
     });
+  }
+
+  // Helper to open mailbox with fallbacks
+  private async openMailbox(client: ImapFlow, folder: EmailFolder): Promise<MailboxObject | null> {
+    const candidates = FOLDER_FALLBACKS[folder] || [DB_TO_IMAP_FOLDER[folder] || 'INBOX'];
+    for (const cand of candidates) {
+      try {
+        const mb = await client.mailboxOpen(cand);
+        return mb;
+      } catch {
+        // try next candidate
+      }
+    }
+    return null;
   }
 
   // Helper to execute IMAP operations with retry logic
@@ -271,7 +297,6 @@ class MailSyncService {
       return { synced: count, errors: 0, total: count };
     }
     const client = this.createClient(email, password);
-    const imapFolder = DB_TO_IMAP_FOLDER[folderName] || 'INBOX';
     
     let synced = 0;
     let errors = 0;
@@ -279,19 +304,12 @@ class MailSyncService {
     try {
       await client.connect();
       
-      // Open the folder
-      let mailbox: MailboxObject;
-      try {
-        mailbox = await client.mailboxOpen(imapFolder);
-      } catch {
-        // Try fallback folder names
-        try {
-          mailbox = await client.mailboxOpen(imapFolder.toUpperCase());
-        } catch {
-          console.log(`Folder ${imapFolder} not found, skipping`);
-          await client.logout();
-          return { synced: 0, errors: 0, total: 0 };
-        }
+      // Open the folder with fallbacks
+      const mailbox = await this.openMailbox(client, folderName);
+      if (!mailbox) {
+        console.log(`Folder for ${folderName} not found, skipping`);
+        await client.logout();
+        return { synced: 0, errors: 0, total: 0 };
       }
 
       const totalMessages = mailbox.exists || 0;
@@ -506,21 +524,28 @@ class MailSyncService {
     });
     if (!email) return false;
 
-    const imapTarget = DB_TO_IMAP_FOLDER[targetFolder];
-    const imapSource = DB_TO_IMAP_FOLDER[email.folder];
-
     try {
       return await this.withRetry(async () => {
         const client = this.createClient(creds.email, creds.password);
         try {
           await client.connect();
-          await client.mailboxOpen(imapSource);
+          const sourceMb = await this.openMailbox(client, email.folder);
+          if (!sourceMb) {
+            await client.logout();
+            return false;
+          }
           
           // Search for the message by Message-ID header
           const searchResults = await client.search({ header: { 'Message-ID': messageId } });
           
           if (Array.isArray(searchResults) && searchResults.length > 0) {
-            await client.messageMove(searchResults, imapTarget);
+            const targetCandidates = FOLDER_FALLBACKS[targetFolder] || [DB_TO_IMAP_FOLDER[targetFolder]];
+            for (const tgt of targetCandidates) {
+              try {
+                await client.messageMove(searchResults, tgt);
+                break;
+              } catch {}
+            }
           }
           
           await client.logout();
@@ -551,14 +576,16 @@ class MailSyncService {
     });
     if (!email) return false;
 
-    const imapFolder = DB_TO_IMAP_FOLDER[email.folder];
-
     try {
       return await this.withRetry(async () => {
         const client = this.createClient(creds.email, creds.password);
         try {
           await client.connect();
-          await client.mailboxOpen(imapFolder);
+          const mb = await this.openMailbox(client, email.folder);
+          if (!mb) {
+            await client.logout();
+            return false;
+          }
           
           const searchResults = await client.search({ header: { 'Message-ID': messageId } });
           
@@ -598,11 +625,14 @@ class MailSyncService {
     if (!attachment) return null;
 
     const client = this.createClient(creds.email, creds.password);
-    const imapFolder = DB_TO_IMAP_FOLDER[email.folder];
 
     try {
       await client.connect();
-      await client.mailboxOpen(imapFolder);
+      const mb = await this.openMailbox(client, email.folder);
+      if (!mb) {
+        await client.logout();
+        return null;
+      }
       
       // Search for the message by Message-ID
       const searchResults = await client.search({ header: { 'Message-ID': messageId } });
