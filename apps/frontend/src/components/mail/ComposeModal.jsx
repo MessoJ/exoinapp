@@ -37,6 +37,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { EmailSignatureTemplate } from '../templates/ExoinEmailSignatures';
 import { signatureApi, authApi, documentsApi } from '../../lib/api';
+import { saveOfflineDraft } from '../../lib/offlineQueue';
 
 // Email Templates
 const EMAIL_TEMPLATES = [
@@ -1005,6 +1006,26 @@ const ComposeModal = ({
       setIncludeSignature(true); // Reset to include signature by default
     }
   }, [isOpen]);
+
+  // Auto-save draft to IndexedDB every 4 seconds when composing
+  useEffect(() => {
+    if (!isOpen) return;
+    const hasContent = Boolean(subject?.trim() || body?.trim() || toChips?.length > 0);
+    if (!hasContent) return;
+
+    const timer = setTimeout(() => {
+      saveOfflineDraft({
+        to: toChips.join(', '),
+        toChips,
+        subject,
+        body,
+        attachments,
+        signatureStyle
+      }).catch(err => console.warn('[ComposeModal] Offline draft auto-save error:', err));
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [isOpen, subject, body, toChips, attachments, signatureStyle]);
 
   // Handle undo countdown
   useEffect(() => {

@@ -1,5 +1,5 @@
-// Exoin Workspace Service Worker
-const CACHE_NAME = 'exoin-workspace-v1';
+// Exoin Workspace Service Worker with Offline Outbox & Background Sync
+const CACHE_NAME = 'exoin-workspace-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -14,7 +14,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE).catch((err) => {
-        console.warn('Pre-cache partial failure:', err);
+        console.warn('[SW] Pre-cache partial failure:', err);
       });
     }).then(() => self.skipWaiting())
   );
@@ -30,6 +30,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Cache & Network Handling
 self.addEventListener('fetch', (event) => {
   // Only handle GET requests and skip API / SSE calls
   if (event.request.method !== 'GET') return;
@@ -63,3 +64,43 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// ========================================================
+// BACKGROUND SYNC & CLIENT COMMUNICATIONS
+// ========================================================
+
+// Listen for background sync tags
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'exoin-sync-outbox') {
+    event.waitUntil(
+      broadcastToClients({ type: 'BACKGROUND_SYNC_TRIGGERED', tag: event.tag })
+    );
+  }
+});
+
+// Listen for messages from client windows
+self.addEventListener('message', (event) => {
+  if (!event.data) return;
+
+  if (event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+
+  if (event.data.type === 'CHECK_OFFLINE_STATUS') {
+    event.source.postMessage({
+      type: 'OFFLINE_STATUS_REPORT',
+      online: navigator.onLine,
+      swVersion: CACHE_NAME
+    });
+  }
+});
+
+/**
+ * Broadcast payload to all open application tabs/windows
+ */
+async function broadcastToClients(payload) {
+  const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  for (const client of clients) {
+    client.postMessage(payload);
+  }
+}

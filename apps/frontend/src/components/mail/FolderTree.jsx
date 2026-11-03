@@ -16,6 +16,7 @@ const FOLDER_ICONS = {
   STARRED: Star,
   SNOOZED: Clock,
   SCHEDULED: Calendar,
+  OUTBOX: Send,
 };
 
 // Predefined label colors

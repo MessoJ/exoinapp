@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
-  Mail, Edit3, RefreshCw, ChevronLeft, ChevronRight, Loader2, 
+  Mail, Edit3, Send, RefreshCw, ChevronLeft, ChevronRight, Loader2, 
   PanelLeftClose, PanelLeft, Settings, Check, X, Key, 
   CheckCircle2, XCircle, Wifi, Keyboard, MoreHorizontal,
   Inbox, ChevronDown, Trash2, Archive, Sun, Moon, MessageSquare,
@@ -306,7 +306,9 @@ const MailPage = () => {
     composeDefaults, selectedEmailIds, selectMode, showKeyboardShortcuts,
     recentSearches, savedSearches, threadMessages, loadingThread, searchSuggestions,
     pendingOutboxId, showUndoToast,
+    isOffline, offlineOutboxCount, offlineOutboxMessages, isSyncingOutbox,
     // Actions
+    syncOfflineOutbox, refreshOfflineOutbox,
     setAccountStatus, fetchFolders, fetchEmails, fetchEmail, setSelectedFolder,
     starEmail, deleteEmail, archiveEmail, markAsRead, moveEmail, 
     selectNextEmail, selectPreviousEmail, toggleSelectEmail, clearSelection,
@@ -353,6 +355,8 @@ const MailPage = () => {
     if (isConfigured) {
       if (selectedFolder === 'SNOOZED') {
         fetchSnoozedEmails();
+      } else if (selectedFolder === 'OUTBOX') {
+        refreshOfflineOutbox?.();
       } else {
         fetchEmails();
       }
@@ -499,6 +503,7 @@ const MailPage = () => {
         <FolderTree
           folders={[
             ...folders,
+            { path: 'OUTBOX', name: 'Outbox', unseen: offlineOutboxCount || 0 },
             { path: 'SNOOZED', name: 'Snoozed', unseen: 0 }
           ]}
           labels={labels}
@@ -756,6 +761,30 @@ const MailPage = () => {
         <div className="flex-1 flex overflow-hidden">
           {/* Email list */}
           <div className={`${selectedEmail ? 'hidden lg:flex w-96 border-r border-slate-200 dark:border-slate-700' : 'flex-1'} flex-col bg-white dark:bg-slate-900`}>
+            {/* Offline & Outbox Sync Alert Banner */}
+            {(isOffline || (offlineOutboxCount > 0)) && (
+              <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2.5 flex items-center justify-between text-xs text-amber-800 dark:text-amber-200">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+                  <span className="font-semibold">{isOffline ? 'Offline Mode' : 'Outbox Pending'}:</span>
+                  <span>
+                    {offlineOutboxCount > 0
+                      ? `${offlineOutboxCount} email(s) queued in IndexedDB outbox.`
+                      : 'Drafts and emails are safely queued on device.'}
+                  </span>
+                </div>
+                {offlineOutboxCount > 0 && !isOffline && (
+                  <button
+                    onClick={() => syncOfflineOutbox?.()}
+                    disabled={isSyncingOutbox}
+                    className="flex items-center gap-1 px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg shadow-sm transition-all text-[11px] disabled:opacity-50"
+                  >
+                    <RefreshCw size={11} className={isSyncingOutbox ? 'animate-spin' : ''} />
+                    <span>{isSyncingOutbox ? 'Syncing...' : 'Sync Now'}</span>
+                  </button>
+                )}
+              </div>
+            )}
             {/* List header */}
             <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
               <span className="text-sm text-slate-500 dark:text-slate-400">
@@ -777,7 +806,54 @@ const MailPage = () => {
               )}
             </div>
 
-            {/* Email list */}
+            {/* Email list or Outbox */}
+            {selectedFolder === 'OUTBOX' ? (
+              <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                {(!offlineOutboxMessages || offlineOutboxMessages.length === 0) ? (
+                  <div className="flex flex-col items-center justify-center h-64 text-slate-400 dark:text-slate-500 px-4">
+                    <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-4">
+                      <Send size={28} />
+                    </div>
+                    <p className="text-base font-semibold text-slate-700 dark:text-slate-200">Outbox is Clean</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 text-center">All queued outbound emails have been synchronized.</p>
+                  </div>
+                ) : (
+                  <div className="p-4 space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                        Queued Outbound ({offlineOutboxMessages.length})
+                      </span>
+                      <button
+                        onClick={() => syncOfflineOutbox?.()}
+                        disabled={isSyncingOutbox || isOffline}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-sm transition-all"
+                      >
+                        <RefreshCw size={12} className={isSyncingOutbox ? 'animate-spin' : ''} />
+                        <span>{isSyncingOutbox ? 'Syncing...' : 'Sync Outbox'}</span>
+                      </button>
+                    </div>
+                    {offlineOutboxMessages.map((msg) => (
+                      <div key={msg.id} className="p-3 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                              {msg.status || 'QUEUED_OFFLINE'}
+                            </span>
+                            <span className="text-xs text-slate-400">
+                              {new Date(msg.queuedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{msg.subject || '(No Subject)'}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                            To: {Array.isArray(msg.toAddresses) ? msg.toAddresses.join(', ') : (msg.to || '')}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
             <EmailList
               emails={emails}
               selectedEmail={selectedEmail}
@@ -809,6 +885,7 @@ const MailPage = () => {
                 </div>
               }
             />
+            )}
           </div>
 
           {/* Email preview / Thread view */}

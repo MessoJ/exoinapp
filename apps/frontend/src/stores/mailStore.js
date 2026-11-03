@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { mailApi } from '../lib/api';
+import { enqueueOutboxMessage, getOutboxMessages, getOutboxCount, flushOfflineOutbox } from '../lib/offlineQueue';
 
 // Default mail settings
 const DEFAULT_SETTINGS = {
@@ -53,6 +54,12 @@ export const useMailStore = create(
       // Labels
       labels: [],
       selectedLabels: [],
+      
+      // Offline & Background Outbox
+      isOffline: typeof navigator !== 'undefined' ? !navigator.onLine : false,
+      offlineOutboxCount: 0,
+      offlineOutboxMessages: [],
+      isSyncingOutbox: false,
       
       // Compose
       composeOpen: false,
@@ -466,13 +473,72 @@ export const useMailStore = create(
       
       setDraftEmail: (draft) => set({ draftEmail: draft }),
       
-      sendEmail: async (data) => {
-        const res = await mailApi.send(data);
-        if (res.data.success) {
-          get().fetchEmails(false);
-          get().fetchFolders();
+      // Offline Outbox actions
+      refreshOfflineOutbox: async () => {
+        try {
+          const messages = await getOutboxMessages();
+          const pending = messages.filter(m => m.status === 'QUEUED_OFFLINE' || m.status === 'FAILED');
+          set({ offlineOutboxMessages: messages, offlineOutboxCount: pending.length });
+        } catch (e) {
+          console.warn('[mailStore] Failed to refresh offline outbox:', e);
         }
-        return res.data;
+      },
+
+      syncOfflineOutbox: async () => {
+        if (get().isSyncingOutbox) return;
+        set({ isSyncingOutbox: true });
+        try {
+          const res = await flushOfflineOutbox(async (data) => {
+            const apiRes = await mailApi.send(data);
+            return apiRes.data;
+          });
+          await get().refreshOfflineOutbox();
+          if (res?.flushed > 0) {
+            get().fetchEmails(false);
+            get().fetchFolders();
+          }
+          return res;
+        } finally {
+          set({ isSyncingOutbox: false });
+        }
+      },
+
+      sendEmail: async (data) => {
+        const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+        if (isOffline) {
+          console.log('[mailStore] Device offline: enqueuing email to IndexedDB outbox');
+          const queued = await enqueueOutboxMessage(data);
+          await get().refreshOfflineOutbox();
+          return {
+            success: true,
+            queuedOffline: true,
+            outboxId: queued.id,
+            message: 'Saved to Outbox (Offline). Will send automatically when online.'
+          };
+        }
+
+        try {
+          const res = await mailApi.send(data);
+          if (res.data.success) {
+            get().fetchEmails(false);
+            get().fetchFolders();
+          }
+          return res.data;
+        } catch (err) {
+          const isNetworkError = !err.response || err.code === 'ERR_NETWORK' || err.message?.includes('Network');
+          if (isNetworkError) {
+            console.warn('[mailStore] Network send failure: fallback queuing into IndexedDB outbox');
+            const queued = await enqueueOutboxMessage(data);
+            await get().refreshOfflineOutbox();
+            return {
+              success: true,
+              queuedOffline: true,
+              outboxId: queued.id,
+              message: 'Connection failed. Saved to Outbox for automatic retry.'
+            };
+          }
+          throw err;
+        }
       },
       
       // Send with undo capability
@@ -721,9 +787,37 @@ export const useMailStore = create(
         }
       },
       
+      setupOfflineListeners: () => {
+        if (typeof window === 'undefined') return;
+        
+        window.addEventListener('online', () => {
+          set({ isOffline: false });
+          get().syncOfflineOutbox();
+        });
+        
+        window.addEventListener('offline', () => {
+          set({ isOffline: true });
+        });
+
+        window.addEventListener('exoin:outbox-updated', () => {
+          get().refreshOfflineOutbox();
+        });
+
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data?.type === 'BACKGROUND_SYNC_TRIGGERED') {
+              get().syncOfflineOutbox();
+            }
+          });
+        }
+
+        get().refreshOfflineOutbox();
+      },
+
       // Initialize
       initialize: async () => {
         try {
+          get().setupOfflineListeners();
           const res = await mailApi.getAccountStatus();
           set({ accountStatus: res.data, isConfigured: res.data.configured });
           
