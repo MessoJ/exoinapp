@@ -12,9 +12,19 @@ import {
   Calculator,
   Calendar,
   Building,
-  DollarSign
+  Coins,
+  Percent,
+  ShieldCheck,
+  Check
 } from 'lucide-react';
 import { documentsApi, clientsApi } from '../lib/api';
+
+const CURRENCY_CONFIG = {
+  KES: { label: 'KES - Kenyan Shilling', symbol: 'KES', locale: 'en-KE' },
+  USD: { label: 'USD - US Dollar', symbol: '$', locale: 'en-US' },
+  EUR: { label: 'EUR - Euro', symbol: '€', locale: 'de-DE' },
+  GBP: { label: 'GBP - British Pound', symbol: '£', locale: 'en-GB' },
+};
 
 const DocumentEditPage = () => {
   const { id } = useParams();
@@ -30,7 +40,11 @@ const DocumentEditPage = () => {
     clientId: '',
     dueDate: '',
     notes: '',
+    scope: '',
+    technicianName: '',
+    includeSeal: true,
     currency: 'KES',
+    taxable: true,
     taxRate: 16,
     items: [{ description: '', quantity: 1, unitPrice: 0 }],
   });
@@ -48,18 +62,25 @@ const DocumentEditPage = () => {
       ]);
       
       const doc = docResponse.data;
-      const parsedContent = typeof doc.content === 'string' ? JSON.parse(doc.content) : doc.content;
+      const parsedContent = typeof doc.content === 'string' ? JSON.parse(doc.content) : (doc.content || {});
       
       setFormData({
         title: doc.title || doc.documentNumber || '',
         type: doc.type || 'INVOICE',
         clientId: doc.clientId || '',
         dueDate: doc.dueDate ? new Date(doc.dueDate).toISOString().split('T')[0] : '',
-        notes: parsedContent?.notes || doc.notes || '',
-        currency: parsedContent?.currency || 'KES',
-        taxRate: parsedContent?.taxRate !== undefined ? parsedContent.taxRate : 16,
-        items: (doc.items && doc.items.length > 0) ? doc.items : 
-               (parsedContent?.items?.length > 0 ? parsedContent.items : [{ description: '', quantity: 1, unitPrice: 0 }]),
+        notes: doc.notes || parsedContent?.notes || '',
+        scope: doc.scope || '',
+        technicianName: doc.technicianName || '',
+        includeSeal: doc.includeSeal !== false,
+        currency: doc.currency || parsedContent?.currency || 'KES',
+        taxable: doc.taxable !== false,
+        taxRate: doc.taxRate !== undefined ? Number(doc.taxRate) : (parsedContent?.taxRate !== undefined ? Number(parsedContent.taxRate) : 16),
+        items: (doc.items && doc.items.length > 0) ? doc.items.map(it => ({
+          description: it.description || it.name || '',
+          quantity: Number(it.quantity) || 1,
+          unitPrice: Number(it.unitPrice) || 0,
+        })) : [{ description: '', quantity: 1, unitPrice: 0 }],
       });
       
       setClients(clientsResponse.data?.clients || clientsResponse.data || []);
@@ -72,8 +93,11 @@ const DocumentEditPage = () => {
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({ 
+      ...prev, 
+      [name]: type === 'checkbox' ? checked : value 
+    }));
   };
 
   const handleItemChange = (index, field, value) => {
@@ -103,7 +127,9 @@ const DocumentEditPage = () => {
   };
 
   const calculateTax = () => {
-    return calculateSubtotal() * ((Number(formData.taxRate) || 0) / 100);
+    if (!formData.taxable) return 0;
+    const rate = Number(formData.taxRate) || 16;
+    return calculateSubtotal() * (rate / 100);
   };
 
   const calculateTotal = () => {
@@ -111,12 +137,18 @@ const DocumentEditPage = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-KE', { 
-      style: 'currency', 
-      currency: formData.currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount || 0);
+    const curr = formData.currency || 'KES';
+    const cfg = CURRENCY_CONFIG[curr] || CURRENCY_CONFIG.KES;
+    try {
+      return new Intl.NumberFormat(cfg.locale, { 
+        style: 'currency', 
+        currency: curr,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(amount || 0);
+    } catch (e) {
+      return `${curr} ${(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -135,6 +167,9 @@ const DocumentEditPage = () => {
 
     try {
       setSaving(true);
+      const subtotal = calculateSubtotal();
+      const taxAmount = calculateTax();
+      const total = calculateTotal();
       
       const documentData = {
         title: formData.title,
@@ -142,7 +177,17 @@ const DocumentEditPage = () => {
         clientId: formData.clientId || null,
         dueDate: formData.dueDate || null,
         notes: formData.notes,
+        scope: formData.scope,
+        technicianName: formData.technicianName,
+        includeSeal: formData.includeSeal,
+        currency: formData.currency || 'KES',
+        taxable: formData.taxable,
+        taxRate: formData.taxable ? (Number(formData.taxRate) || 16) : 0,
+        subtotal,
+        taxAmount,
+        total,
         items: formData.items.map(item => ({
+          name: item.description,
           description: item.description,
           quantity: Number(item.quantity) || 1,
           unitPrice: Number(item.unitPrice) || 0,
@@ -151,11 +196,14 @@ const DocumentEditPage = () => {
         content: JSON.stringify({
           items: formData.items,
           notes: formData.notes,
+          scope: formData.scope,
+          technicianName: formData.technicianName,
           currency: formData.currency,
-          taxRate: formData.taxRate,
-          subtotal: calculateSubtotal(),
-          tax: calculateTax(),
-          total: calculateTotal(),
+          taxable: formData.taxable,
+          taxRate: formData.taxable ? (Number(formData.taxRate) || 16) : 0,
+          subtotal,
+          tax: taxAmount,
+          total,
         }),
       };
 
@@ -178,7 +226,7 @@ const DocumentEditPage = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 antialiased">
+    <div className="max-w-4xl mx-auto space-y-6 pb-36 sm:pb-24 antialiased">
       {/* 1. Header */}
       <div className="flex items-center gap-3 bg-white/90 backdrop-blur-xl p-4 sm:p-6 rounded-3xl border border-slate-200/80 shadow-xs">
         <Link 
@@ -192,7 +240,7 @@ const DocumentEditPage = () => {
             Edit Document
           </h1>
           <p className="text-xs sm:text-sm text-slate-500">
-            Modify document metadata, line items, and terms
+            Modify specifications, multi-currency, tax calculation & line items
           </p>
         </div>
       </div>
@@ -234,7 +282,7 @@ const DocumentEditPage = () => {
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none transition-all"
               >
                 <option value="INVOICE">Tax Invoice</option>
-                <option value="QUOTATION">Quotation</option>
+                <option value="QUOTATION">Commercial Quotation</option>
                 <option value="DELIVERY_NOTE">Delivery Note</option>
                 <option value="JOB_CARD">Service Job Card</option>
               </select>
@@ -258,7 +306,9 @@ const DocumentEditPage = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Due Date</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                {formData.type === 'JOB_CARD' ? 'Next Service Date (Optional)' : 'Due / Validity Date'}
+              </label>
               <input
                 type="date"
                 name="dueDate"
@@ -268,18 +318,91 @@ const DocumentEditPage = () => {
               />
             </div>
 
+            {/* Currency Selector */}
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Currency</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1">
+                <Coins size={13} className="text-slate-400" />
+                Currency
+              </label>
               <select
                 name="currency"
                 value={formData.currency}
                 onChange={handleChange}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-bold text-slate-900 focus:bg-white focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
               >
                 <option value="KES">KES - Kenyan Shilling</option>
-                <option value="USD">USD - US Dollar</option>
-                <option value="EUR">EUR - Euro</option>
+                <option value="USD">USD - US Dollar ($)</option>
+                <option value="EUR">EUR - Euro (€)</option>
+                <option value="GBP">GBP - British Pound (£)</option>
               </select>
+            </div>
+
+            {/* Tax Treatment */}
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1">
+                <Percent size={13} className="text-slate-400" />
+                Tax Treatment
+              </label>
+              <button
+                type="button"
+                onClick={() => setFormData(p => ({ ...p, taxable: !p.taxable }))}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 border rounded-2xl text-xs font-bold transition-all ${
+                  formData.taxable 
+                    ? 'bg-blue-50/70 border-blue-200 text-blue-900' 
+                    : 'bg-slate-50 border-slate-200 text-slate-500'
+                }`}
+              >
+                <span>{formData.taxable ? '16% VAT (KRA Standard Rate)' : 'Zero-Rated / Tax Exempt (0%)'}</span>
+                <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                  formData.taxable ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300'
+                }`}>
+                  {formData.taxable && <span className="w-1.5 h-1.5 rounded-full bg-white"></span>}
+                </span>
+              </button>
+            </div>
+
+            {/* Type Specific Fields */}
+            {formData.type === 'JOB_CARD' && (
+              <>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Technician Name</label>
+                  <input
+                    type="text"
+                    name="technicianName"
+                    value={formData.technicianName}
+                    onChange={handleChange}
+                    placeholder="e.g. Francis Meso"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Service Location / Site</label>
+                  <input
+                    type="text"
+                    name="scope"
+                    value={formData.scope}
+                    onChange={handleChange}
+                    placeholder="e.g. Webuye RRU Complex"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Seal Toggle */}
+            <div className="sm:col-span-2 pt-2 flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="includeSealEdit"
+                name="includeSeal"
+                checked={formData.includeSeal}
+                onChange={handleChange}
+                className="w-4 h-4 text-orange-600 rounded-md focus:ring-orange-500 cursor-pointer"
+              />
+              <label htmlFor="includeSealEdit" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 cursor-pointer">
+                <ShieldCheck size={14} className="text-orange-500" />
+                Include Official Company Seal & Watermark
+              </label>
             </div>
           </div>
         </div>
@@ -339,7 +462,9 @@ const DocumentEditPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Rate</label>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                      Rate ({formData.currency})
+                    </label>
                     <input
                       type="number"
                       min="0"
@@ -360,16 +485,23 @@ const DocumentEditPage = () => {
             ))}
           </div>
 
-          {/* Totals */}
+          {/* Totals Summary */}
           <div className="pt-3 border-t border-slate-100 space-y-1.5 text-xs">
             <div className="flex justify-between text-slate-500">
               <span>Subtotal</span>
               <span className="font-semibold text-slate-800">{formatCurrency(calculateSubtotal())}</span>
             </div>
-            <div className="flex justify-between text-slate-500">
-              <span>VAT ({formData.taxRate}%)</span>
-              <span className="font-semibold text-slate-800">{formatCurrency(calculateTax())}</span>
-            </div>
+            {formData.taxable ? (
+              <div className="flex justify-between text-slate-500">
+                <span>VAT ({formData.taxRate || 16}%)</span>
+                <span className="font-semibold text-slate-800">{formatCurrency(calculateTax())}</span>
+              </div>
+            ) : (
+              <div className="flex justify-between text-slate-400">
+                <span>VAT (Zero-Rated / Exempt)</span>
+                <span className="font-semibold">{formatCurrency(0)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm font-black text-slate-900 pt-2 border-t border-slate-200">
               <span>Updated Total</span>
               <span className="text-orange-600">{formatCurrency(calculateTotal())}</span>

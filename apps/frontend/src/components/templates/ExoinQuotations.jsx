@@ -187,7 +187,7 @@ export const QuotationTemplate = ({
                   <tr>
                      <th className="py-2.5 pl-3 pr-2 font-bold uppercase tracking-wider w-[45%]">Item & Scope</th>
                      <th className="py-2.5 text-center w-[12%]">Qty</th>
-                     <th className="py-2.5 text-right w-[18%]">Price (KES)</th>
+                     <th className="py-2.5 text-right w-[18%]">Price ({displayData.currency || 'KES'})</th>
                      <th className="py-2.5 text-center w-[12%]">Tax</th>
                      <th className="py-2.5 pr-3 text-right w-[18%]">Total</th>
                   </tr>
@@ -269,7 +269,7 @@ export const QuotationTemplate = ({
                       <span className="font-mono">{Number(displayData.subtotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                    </div>
                    <div className="flex justify-between text-slate-500">
-                      <span>Total VAT (16%)</span>
+                      <span>Total VAT ({displayData.taxable !== false ? (displayData.taxRate || 16) : 0}%)</span>
                       <span className="font-mono">{Number(displayData.tax || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                    </div>
                    <div className="flex justify-between text-slate-500">
@@ -279,7 +279,7 @@ export const QuotationTemplate = ({
                    <div className="flex justify-between items-end pt-2 border-t border-slate-200">
                       <span className="text-xs font-bold text-slate-900 uppercase">Total Amount</span>
                       <div className="text-right">
-                          <span className="text-[10px] text-slate-400 font-bold mr-1">KES</span>
+                          <span className="text-[10px] text-slate-400 font-bold mr-1">{displayData.currency || 'KES'}</span>
                           <span className="text-lg font-black text-orange-600">
                             {Number(displayData.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                           </span>

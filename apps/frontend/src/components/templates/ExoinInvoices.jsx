@@ -302,7 +302,7 @@ export const InvoiceTemplate = ({
                       <div className="flex justify-between items-end pt-2 border-t border-slate-200">
                          <span className="text-xs font-bold text-slate-900 uppercase tracking-widest">Total Due</span>
                          <div className="text-right">
-                             <span className="text-[10px] text-slate-400 font-bold mr-1">KES</span>
+                             <span className="text-[10px] text-slate-400 font-bold mr-1">{displayData.currency || 'KES'}</span>
                              <span className="text-xl font-black text-orange-600">{displayData.total.toLocaleString()}</span>
                          </div>
                       </div>

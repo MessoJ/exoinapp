@@ -19,12 +19,22 @@ import {
   Sparkles,
   ExternalLink,
   ZoomIn,
-  ZoomOut
+  ZoomOut,
+  Coins,
+  ShieldCheck,
+  Percent
 } from 'lucide-react';
 import { InvoiceTemplate } from '../components/templates/ExoinInvoices';
 import { QuotationTemplate } from '../components/templates/ExoinQuotations';
 import { DeliveryNoteTemplate } from '../components/templates/ExoinDeliveryNote';
 import { JobCardTemplate } from '../components/templates/ExoinJobCard';
+
+const CURRENCY_CONFIG = {
+  KES: { label: 'KES - Kenyan Shilling', symbol: 'KES', locale: 'en-KE' },
+  USD: { label: 'USD - US Dollar', symbol: '$', locale: 'en-US' },
+  EUR: { label: 'EUR - Euro', symbol: '€', locale: 'de-DE' },
+  GBP: { label: 'GBP - British Pound', symbol: '£', locale: 'en-GB' },
+};
 
 const DocumentCreatePage = () => {
   const navigate = useNavigate();
@@ -43,6 +53,10 @@ const DocumentCreatePage = () => {
     clientId: '',
     date: new Date().toISOString().split('T')[0],
     dueDate: '',
+    currency: 'KES',
+    taxable: true,
+    taxRate: 16,
+    includeSeal: true,
     notes: '',
     scope: '',
     technicianName: '',
@@ -88,8 +102,11 @@ const DocumentCreatePage = () => {
   }, []);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({ 
+      ...prev, 
+      [name]: type === 'checkbox' ? checked : value 
+    }));
   };
 
   const handleItemChange = (index, field, value) => {
@@ -122,7 +139,9 @@ const DocumentCreatePage = () => {
   };
 
   const calculateTax = () => {
-    return calculateSubtotal() * 0.16; // 16% VAT
+    if (!formData.taxable) return 0;
+    const rate = Number(formData.taxRate) || 16;
+    return calculateSubtotal() * (rate / 100);
   };
 
   const calculateTotal = () => {
@@ -130,12 +149,18 @@ const DocumentCreatePage = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount || 0);
+    const curr = formData.currency || 'KES';
+    const cfg = CURRENCY_CONFIG[curr] || CURRENCY_CONFIG.KES;
+    try {
+      return new Intl.NumberFormat(cfg.locale, {
+        style: 'currency',
+        currency: curr,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(amount || 0);
+    } catch (e) {
+      return `${curr} ${(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    }
   };
 
   const selectedClientObj = clients.find(c => c.id === formData.clientId);
@@ -153,6 +178,9 @@ const DocumentCreatePage = () => {
     scope: formData.scope || 'On-site Inspection, Fumigation and Treatment',
     companyPhone: company?.phone || '0739443244',
     companyEmail: company?.email || 'info@exoinafrica.com',
+    currency: formData.currency,
+    taxable: formData.taxable,
+    taxRate: formData.taxable ? (Number(formData.taxRate) || 16) : 0,
     client: {
       name: selectedClientObj?.name || 'Client Name / Organization',
       contactPerson: selectedClientObj?.contactPerson || 'Attn: Management',
@@ -162,16 +190,19 @@ const DocumentCreatePage = () => {
     },
     items: formData.items.map(item => ({
       name: item.description || 'Service Line Item',
+      title: item.description || 'Service Line Item',
       description: item.description || 'Professional service rendered',
       quantity: Number(item.quantity) || 1,
+      qty: Number(item.quantity) || 1,
       unitPrice: Number(item.unitPrice) || 0,
+      rate: Number(item.unitPrice) || 0,
       total: (Number(item.quantity) || 1) * (Number(item.unitPrice) || 0)
     })),
     subtotal: calculateSubtotal(),
     taxAmount: calculateTax(),
+    tax: calculateTax(),
     total: calculateTotal(),
-    taxRate: 16,
-    includeSeal: true,
+    includeSeal: formData.includeSeal,
     notes: formData.notes || (formData.type === 'JOB_CARD' 
       ? 'Safe for re-entry after 2 hours. Client satisfied with service delivery.' 
       : 'Payment due within 14 days of invoice issuance.')
@@ -183,13 +214,25 @@ const DocumentCreatePage = () => {
     if (sendEmail) setSendingEmail(true);
 
     try {
+      const subtotal = calculateSubtotal();
+      const taxAmount = calculateTax();
+      const total = calculateTotal();
+
       const submitData = {
         ...formData,
         clientId: formData.clientId || null,
+        currency: formData.currency || 'KES',
+        taxable: formData.taxable,
+        taxRate: formData.taxable ? (Number(formData.taxRate) || 16) : 0,
+        subtotal,
+        taxAmount,
+        total,
         items: formData.items.map(item => ({
+          name: item.description,
           description: item.description,
           quantity: Number(item.quantity),
-          unitPrice: Number(item.unitPrice)
+          unitPrice: Number(item.unitPrice),
+          total: Number(item.quantity) * Number(item.unitPrice)
         }))
       };
 
@@ -224,13 +267,14 @@ const DocumentCreatePage = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 antialiased">
-      {/* 1. Apple-style Header with Type Selector & Mobile Switcher */}
+    <div className="max-w-7xl mx-auto space-y-6 pb-36 sm:pb-24 antialiased">
+      {/* 1. Header Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/90 backdrop-blur-xl p-4 sm:p-6 rounded-3xl border border-slate-200/80 shadow-xs">
         <div className="flex items-center gap-3">
           <Link 
-            to="/documents"
+            to="/documents" 
             className="p-2 sm:p-2.5 hover:bg-slate-100 rounded-2xl text-slate-500 active:scale-95 transition-all touch-manipulation"
+            title="Back to Documents"
           >
             <ArrowLeft size={20} />
           </Link>
@@ -240,11 +284,11 @@ const DocumentCreatePage = () => {
                 Create {formData.type === 'JOB_CARD' ? 'Job Card' : formData.type === 'DELIVERY_NOTE' ? 'Delivery Note' : formData.type === 'INVOICE' ? 'Invoice' : 'Quotation'}
               </h1>
               <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700">
-                Live Preview
+                Live Studio
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-500">
-              Interactive document composer with real-time A4 preview
+              Interactive document composer with real-time A4 preview & multi-currency
             </p>
           </div>
         </div>
@@ -288,12 +332,12 @@ const DocumentCreatePage = () => {
         </div>
       </div>
 
-      {/* 2. Apple Split Grid: Form Editor & Real-time Live Preview */}
+      {/* 2. Split Grid: Form Editor & Real-time Live Preview */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Form Editor (Visible on Desktop OR when activeTab === 'form' on mobile) */}
         <div className={`lg:col-span-6 space-y-5 ${activeTab === 'preview' ? 'hidden lg:block' : 'block'}`}>
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Card A: Document Classification & Client */}
+            {/* Card A: Document Specifications & Client */}
             <div className="bg-white/90 backdrop-blur-md rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-xs space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
@@ -315,7 +359,7 @@ const DocumentCreatePage = () => {
                     <option value="JOB_CARD">Service Job Card</option>
                     <option value="DELIVERY_NOTE">Delivery Note</option>
                     <option value="INVOICE">Tax Invoice</option>
-                    <option value="QUOTATION">Quotation</option>
+                    <option value="QUOTATION">Commercial Quotation</option>
                   </select>
                 </div>
 
@@ -358,10 +402,54 @@ const DocumentCreatePage = () => {
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs font-semibold text-slate-900 focus:bg-white focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none transition-all"
                   />
                 </div>
+
+                {/* Currency Selector */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1">
+                    <Coins size={13} className="text-slate-400" />
+                    Currency
+                  </label>
+                  <select
+                    name="currency"
+                    value={formData.currency}
+                    onChange={handleChange}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs font-bold text-slate-900 focus:bg-white focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none transition-all"
+                  >
+                    <option value="KES">KES - Kenyan Shilling</option>
+                    <option value="USD">USD - US Dollar ($)</option>
+                    <option value="EUR">EUR - Euro (€)</option>
+                    <option value="GBP">GBP - British Pound (£)</option>
+                  </select>
+                </div>
+
+                {/* Tax Configuration */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1">
+                    <Percent size={13} className="text-slate-400" />
+                    Tax Treatment
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(p => ({ ...p, taxable: !p.taxable }))}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 border rounded-2xl text-xs font-bold transition-all ${
+                      formData.taxable 
+                        ? 'bg-blue-50/70 border-blue-200 text-blue-900' 
+                        : 'bg-slate-50 border-slate-200 text-slate-500'
+                    }`}
+                  >
+                    <span>{formData.taxable ? '16% VAT (KRA Standard)' : 'Zero-Rated / Tax Exempt (0%)'}</span>
+                    <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                      formData.taxable ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300'
+                    }`}>
+                      {formData.taxable && <span className="w-1.5 h-1.5 rounded-full bg-white"></span>}
+                    </span>
+                  </button>
+                </div>
               </div>
 
+              {/* Type-Specific Fields */}
               {formData.type === 'JOB_CARD' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2 border-t border-slate-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-3 border-t border-slate-100">
                   <div>
                     <label className="block text-xs font-semibold text-slate-600 mb-1.5">Technician Name</label>
                     <input
@@ -386,6 +474,22 @@ const DocumentCreatePage = () => {
                   </div>
                 </div>
               )}
+
+              {/* Seal Toggle */}
+              <div className="pt-2 flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="includeSeal"
+                  name="includeSeal"
+                  checked={formData.includeSeal}
+                  onChange={handleChange}
+                  className="w-4 h-4 text-orange-600 rounded-md focus:ring-orange-500 cursor-pointer"
+                />
+                <label htmlFor="includeSeal" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 cursor-pointer">
+                  <ShieldCheck size={14} className="text-orange-500" />
+                  Include Official Company Seal & Watermark
+                </label>
+              </div>
             </div>
 
             {/* Card B: Line Items */}
@@ -451,7 +555,7 @@ const DocumentCreatePage = () => {
                       </div>
                       <div>
                         <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                          Unit Rate
+                          Unit Rate ({formData.currency})
                         </label>
                         <input
                           type="number"
@@ -476,16 +580,23 @@ const DocumentCreatePage = () => {
                 ))}
               </div>
 
-              {/* Totals Summary Card */}
+              {/* Totals Summary Breakdown */}
               <div className="pt-3 border-t border-slate-100 space-y-1.5 text-xs">
                 <div className="flex justify-between text-slate-500">
                   <span>Subtotal</span>
                   <span className="font-semibold text-slate-800">{formatCurrency(calculateSubtotal())}</span>
                 </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>VAT (16%)</span>
-                  <span className="font-semibold text-slate-800">{formatCurrency(calculateTax())}</span>
-                </div>
+                {formData.taxable ? (
+                  <div className="flex justify-between text-slate-500">
+                    <span>VAT ({formData.taxRate || 16}%)</span>
+                    <span className="font-semibold text-slate-800">{formatCurrency(calculateTax())}</span>
+                  </div>
+                ) : (
+                  <div className="flex justify-between text-slate-400">
+                    <span>VAT (Zero-Rated / Exempt)</span>
+                    <span className="font-semibold">{formatCurrency(0)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm font-black text-slate-900 pt-2 border-t border-slate-200">
                   <span>Total Amount</span>
                   <span className="text-orange-600">{formatCurrency(calculateTotal())}</span>
@@ -516,7 +627,7 @@ const DocumentCreatePage = () => {
                 onClick={() => setActiveTab('preview')}
                 className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-900 text-white rounded-2xl text-xs font-bold active:scale-95 transition-all shadow-md shadow-slate-900/10"
               >
-                <Eye size={16} /> View Document Preview
+                <Eye size={16} /> View Live Preview
               </button>
             </div>
 
@@ -563,7 +674,7 @@ const DocumentCreatePage = () => {
                   Live Document Render
                 </span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold">
-                  A4 595px
+                  A4 595px • {formData.currency}
                 </span>
               </div>
 
