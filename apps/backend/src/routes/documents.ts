@@ -103,7 +103,9 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
       items,
       scope,
       taxable,
-      taxRate: reqTaxRate
+      taxRate: reqTaxRate,
+      status: reqStatus,
+      currency: reqCurrency,
     } = request.body as any;
     
     // Generate document number
@@ -132,12 +134,15 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
       : (computedSubtotal + taxAmount);
     
     const documentDate = date || issueDate || new Date();
+    const resolvedStatus = (reqStatus && Object.values(DocumentStatus).includes(reqStatus)) 
+      ? reqStatus 
+      : DocumentStatus.DRAFT;
     
     const document = await prisma.document.create({
       data: {
         documentNumber,
         type,
-        status: DocumentStatus.DRAFT,
+        status: resolvedStatus,
         issueDate: new Date(documentDate),
         dueDate: dueDate ? new Date(dueDate) : null,
         subtotal: computedSubtotal,
@@ -145,6 +150,7 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
         taxRate,
         taxAmount,
         total,
+        currency: reqCurrency || 'KES',
         scope,
         notes,
         terms,
@@ -185,8 +191,8 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
     const { id } = request.params as any;
     const { companyId } = (request as any).user;
     const { 
-      status, 
       clientId, 
+      status, 
       issueDate, 
       dueDate, 
       notes, 
@@ -197,7 +203,8 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
       items,
       scope,
       taxable,
-      taxRate
+      taxRate,
+      currency
     } = request.body as any;
     
     // Verify document exists and belongs to company
@@ -209,7 +216,9 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
       return reply.status(404).send({ error: 'Document not found' });
     }
     
-    let updateData: any = { status, clientId, issueDate, dueDate, notes, terms, scope, technicianName };
+    let updateData: any = { clientId, issueDate, dueDate, notes, terms, scope, technicianName };
+    if (status && Object.values(DocumentStatus).includes(status)) updateData.status = status;
+    if (currency) updateData.currency = currency;
     if (includeSeal !== undefined) updateData.includeSeal = includeSeal;
     if (signature !== undefined) updateData.signature = signature;
     if (taxable !== undefined) updateData.taxable = taxable;
@@ -344,6 +353,7 @@ export default async function documentsRoutes(fastify: FastifyInstance) {
         taxRate: existing.taxRate,
         taxAmount: existing.taxAmount,
         total: existing.total,
+        currency: existing.currency,
         scope: existing.scope,
         notes: existing.notes,
         terms: existing.terms,

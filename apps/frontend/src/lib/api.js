@@ -65,6 +65,8 @@ export const clientsApi = {
   create: (data) => api.post('/clients', data),
   update: (id, data) => api.put(`/clients/${id}`, data),
   delete: (id) => api.delete(`/clients/${id}`),
+  getStatement: (id, params) => api.get(`/clients/${id}/statement`, { params }),
+  emailStatement: (id, data) => api.post(`/clients/${id}/statement/email`, data),
 };
 
 // Company API
