@@ -14,8 +14,8 @@ const minioClient = new Minio.Client({
   endPoint: process.env.MINIO_ENDPOINT || 'localhost',
   port: parseInt(process.env.MINIO_PORT || '9000'),
   useSSL: process.env.MINIO_USE_SSL === 'true',
-  accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
-  secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
+  accessKey: process.env.MINIO_ACCESS_KEY || 'admin',
+  secretKey: process.env.MINIO_SECRET_KEY || 'secureminiopass',
 });
 
 const BUCKET_NAME = 'exoin-assets';
@@ -877,6 +877,48 @@ export default async function mailRoutes(fastify: FastifyInstance) {
     return null;
   }
 
+  // Upload attachment directly to MinIO
+  fastify.post('/attachments/upload', {
+    preHandler: [(fastify as any).authenticate]
+  }, async (request, reply) => {
+    const { id: userId } = (request as any).user;
+    const { filename, mimeType, data } = request.body as any;
+
+    if (!filename || !data) {
+      return reply.status(400).send({ error: 'Filename and base64 data are required' });
+    }
+
+    try {
+      const buffer = Buffer.from(data, 'base64');
+      const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const objectName = `mail-attachments/${userId}/${Date.now()}-${safeFilename}`;
+
+      const bucketExists = await minioClient.bucketExists(BUCKET_NAME).catch(() => false);
+      if (!bucketExists) {
+        await minioClient.makeBucket(BUCKET_NAME).catch(console.error);
+      }
+
+      await minioClient.putObject(BUCKET_NAME, objectName, buffer, buffer.length, {
+        'Content-Type': mimeType || 'application/octet-stream',
+      });
+
+      const url = `/${BUCKET_NAME}/${objectName}`;
+
+      return {
+        success: true,
+        filename: safeFilename,
+        mimeType: mimeType || 'application/octet-stream',
+        size: buffer.length,
+        url,
+        encoding: 'base64',
+        content: data
+      };
+    } catch (err: any) {
+      console.error('Failed to upload attachment to MinIO:', err);
+      return reply.status(500).send({ error: 'MinIO upload failed: ' + err.message });
+    }
+  });
+
   fastify.post('/send', {
     preHandler: [(fastify as any).authenticate]
   }, async (request, reply) => {
@@ -906,12 +948,26 @@ export default async function mailRoutes(fastify: FastifyInstance) {
     // Process attachments from request body
     if (reqAttachments && Array.isArray(reqAttachments)) {
       for (const att of reqAttachments) {
-        if (att.filename && att.content && att.encoding === 'base64') {
+        if (att.filename && (att.content || att.data) && (att.encoding === 'base64' || !att.encoding)) {
           attachments.push({
             filename: att.filename,
-            content: Buffer.from(att.content, 'base64'),
-            contentType: att.contentType || 'application/octet-stream'
+            content: Buffer.from(att.content || att.data, 'base64'),
+            contentType: att.contentType || att.mimeType || 'application/octet-stream'
           });
+        } else if (att.url && att.url.startsWith(`/${BUCKET_NAME}/`)) {
+          try {
+            const objectName = att.url.replace(`/${BUCKET_NAME}/`, '');
+            const stream = await minioClient.getObject(BUCKET_NAME, objectName);
+            const chunks: Buffer[] = [];
+            for await (const chunk of stream) chunks.push(chunk);
+            attachments.push({
+              filename: att.filename || objectName.split('-').pop() || 'attachment',
+              content: Buffer.concat(chunks),
+              contentType: att.mimeType || att.contentType || 'application/octet-stream'
+            });
+          } catch (err) {
+            console.warn('Failed to fetch attachment from MinIO:', err);
+          }
         }
       }
     }

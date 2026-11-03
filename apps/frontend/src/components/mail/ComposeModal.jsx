@@ -832,6 +832,20 @@ const ComposeModal = ({
   const [position, setPosition] = useState({ x: null, y: null });
   const [isDragging, setIsDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
+  const [isFileDragging, setIsFileDragging] = useState(false);
+
+  const handleSignatureStyleChange = async (style) => {
+    setLatestUser(prev => ({ ...prev, signatureStyle: style }));
+    try {
+      await signatureApi.updateSettings({ signatureStyle: style, signatureEnabled: true });
+      const res = await signatureApi.getHtml(false, true);
+      if (res.data?.html) {
+        setUserSignature(res.data.html);
+      }
+    } catch (err) {
+      console.warn('Failed to switch signature style:', err);
+    }
+  };
   
   // Refs
   const templateButtonRef = useRef(null);
@@ -1375,7 +1389,38 @@ const ComposeModal = ({
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           className={`${getModalClasses()} bg-white dark:bg-gray-900 rounded-t-2xl ${isFullscreen ? 'rounded-2xl' : ''} shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden`}
           style={getModalStyle()}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.dataTransfer && e.dataTransfer.types.includes('Files')) {
+              setIsFileDragging(true);
+            }
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.currentTarget.contains(e.relatedTarget)) return;
+            setIsFileDragging(false);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsFileDragging(false);
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+              setAttachments(prev => [...prev, ...Array.from(e.dataTransfer.files)]);
+            }
+          }}
         >
+          {/* Drag & Drop Visual Dropzone Overlay */}
+          {isFileDragging && (
+            <div className="absolute inset-0 z-50 bg-orange-600/10 backdrop-blur-xs border-2 border-dashed border-orange-500 rounded-2xl flex flex-col items-center justify-center pointer-events-none animate-in fade-in">
+              <div className="p-5 bg-white dark:bg-slate-900 rounded-2xl shadow-xl flex flex-col items-center gap-2 border border-orange-200">
+                <Paperclip className="h-8 w-8 text-orange-600 animate-bounce" />
+                <p className="text-sm font-bold text-slate-800 dark:text-white">Drop files to attach to this email</p>
+                <p className="text-xs text-slate-500">Supports documents, invoices, PDFs, and images</p>
+              </div>
+            </div>
+          )}
           {/* Header - Gmail-like dark header, draggable */}
           <div 
             className={`flex items-center justify-between px-4 py-2.5 ${
@@ -1611,8 +1656,32 @@ const ComposeModal = ({
                   <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 flex-shrink-0">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                        <PenTool className="h-3.5 w-3.5" />
-                        <span className="text-xs font-medium">Signature Preview</span>
+                        <PenTool className="h-3.5 w-3.5 text-orange-500" />
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Signature</span>
+                        <div className="flex items-center bg-slate-200 dark:bg-slate-700 rounded-lg p-0.5 text-[10px] font-semibold ml-2">
+                          <button
+                            type="button"
+                            onClick={() => handleSignatureStyleChange('executive')}
+                            className={`px-2 py-0.5 rounded-md transition-all ${
+                              (latestUser?.signatureStyle || 'executive') === 'executive'
+                                ? 'bg-white dark:bg-slate-900 text-orange-600 shadow-xs'
+                                : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'
+                            }`}
+                          >
+                            Executive
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSignatureStyleChange('minimal')}
+                            className={`px-2 py-0.5 rounded-md transition-all ${
+                              latestUser?.signatureStyle === 'minimal'
+                                ? 'bg-white dark:bg-slate-900 text-orange-600 shadow-xs'
+                                : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'
+                            }`}
+                          >
+                            Compact
+                          </button>
+                        </div>
                       </div>
                       <button
                         onClick={() => setIncludeSignature(false)}

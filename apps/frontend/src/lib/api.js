@@ -169,6 +169,9 @@ export const mailApi = {
   getMessage: (id) => api.get(`/mail/messages/${id}`),
   getThread: (subjectQuery) => api.get(`/mail/thread/${encodeURIComponent(subjectQuery)}`),
   
+  // Attachments & Uploads
+  uploadAttachment: (data) => api.post('/mail/attachments/upload', data),
+
   // Send emails
   send: (data) => api.post('/mail/send', data),
   sendWithUndo: (data) => api.post('/mail/send/queue', data),
